@@ -26,6 +26,12 @@ def test_resolve_full_name_from_filing_text():
     assert resolve_full_name("Mr. Ament", doc) == ("Jonathan R. Ament", True)
     assert resolve_full_name("Priya Ellsworth-Nakamura", doc) == ("Priya Ellsworth-Nakamura", False)
     assert resolve_full_name("Ms. Nobody", doc) == ("Ms. Nobody", False)
+    # single-token names and lowercase-start surnames (seen in a live Stanford run)
+    doc2 = "Emil deGoma has served as our Chief Medical Officer since 2022. Dr. deGoma received his M.D. from Stanford University. Previously Dr. deGoma led trials at Amgen. Ravi Ravichandran joined us in 2021; Mr. Ravichandran holds an M.B.A. from Stanford University."
+    assert resolve_full_name("Dr. deGoma", doc2) == ("Emil deGoma", True)
+    assert resolve_full_name("Emil", doc2) == ("Emil deGoma", True)
+    assert resolve_full_name("Ravichandran", doc2) == ("Ravi Ravichandran", True)
+    assert resolve_full_name("Jeff", "Nothing here about anyone.") == ("Jeff", False)
 
 
 def test_hit_from_json_builds_document_url():

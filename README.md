@@ -94,8 +94,10 @@ correct or not) and `eval/out/<slug>-eval.json`. The fictional subject's file is
   claim (about 50 cents). The hand audit in the CSV remains the ground truth.
 
 Measured on two public-figure subjects in September 2026: recall 7 to 9 of 11 and 8 of 10 known
-facts across seven runs; model-judged precision 89% and 92% of verified claims before the
-"quote must reference the subject" rule was added in response to those results.
+facts across eight runs. Model-judged precision was 89% and 92% of verified claims; judging every
+claim showed the misses were quote fragments that never said who did the thing, so a code rule now
+requires the quote to reference the subject. On the next run precision was 99% (217 of 219) with
+recall unchanged.
 
 Tests:
 
