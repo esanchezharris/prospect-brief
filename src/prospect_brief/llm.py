@@ -52,7 +52,7 @@ class AnthropicProvider:
 
         self.config = config
         self.client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
-        self.models = {"writer": config.get("models", "writer"), "checker": config.get("models", "checker")}
+        self.models = {"writer": config.get("models", "writer"), "checker": config.get("models", "checker"), "author": config.get("models", "author") or config.get("models", "writer")}
         self.log = CallLog(run_dir)
         self._usage: dict[str, LLMUsage] = {}
 
@@ -67,9 +67,9 @@ class AnthropicProvider:
     def structured(self, *, purpose: str, role: str, system: str, user: str, schema: type[T], max_tokens: int = 4096) -> T:
         model = self.models[role]
         kwargs: dict[str, Any] = {}
-        if role == "writer":
+        if role in ("writer", "author"):
             kwargs["thinking"] = {"type": "adaptive"}
-            kwargs["output_config"] = {"effort": "medium"}
+            kwargs["output_config"] = {"effort": "medium" if role == "writer" else "high"}
         t0 = time.monotonic()
         resp = self.client.messages.parse(
             model=model,

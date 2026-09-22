@@ -1,7 +1,7 @@
 models:
   writer: claude-sonnet-5          # extraction, planning, writing (Sonnet-class per SPEC.md)
   checker: claude-haiku-4-5-20251001  # cheap yes/no checks (entailment)
-  # To try a stronger writer: set writer to claude-opus-5-5 ($4/$20 per MTok, roughly 2x Sonnet 5).
+  author: claude-opus-5-5          # the one final call that writes the brief prose from verified evidence
 prices_per_mtok:                   # USD, input/output, from platform.claude.com/docs/en/about-claude/pricing (Sep 22, 2026)
   claude-sonnet-5: {input: 2.00, output: 10.00}
   claude-haiku-4-5-20251001: {input: 1.00, output: 5.00}

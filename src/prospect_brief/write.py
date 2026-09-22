@@ -82,7 +82,7 @@ def write_brief(llm: LLMProvider, config: Config, subject: str, institution: str
     draft = BriefDraft(sections=[], talking_points=[])
     for attempt in range(2):
         stats["attempts"] += 1
-        raw = llm.structured(purpose=f"write-{attempt + 1}", role="writer", system=SYSTEM, user=user, schema=BriefDraft, max_tokens=8000)
+        raw = llm.structured(purpose=f"write-{attempt + 1}", role="author", system=SYSTEM, user=user, schema=BriefDraft, max_tokens=8000)
         draft, kept, deleted = _post_check(raw, valid_ids, factual_keys, {e.id: e for e in verified})
         stats["sentences_kept"], stats["sentences_deleted"] = kept, deleted
         total = kept + deleted

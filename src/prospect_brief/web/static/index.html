@@ -55,6 +55,10 @@
   .trap .n { font-size:22px; font-weight:600; color:var(--bad); }
   ul.runs { list-style:none; padding:0; margin:8px 0 0; } ul.runs li { padding:5px 0; border-bottom:1px solid var(--rule); font-size:14px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
   .notice { border-left:3px solid var(--accent); padding:6px 10px; background:var(--card); font-size:13.5px; margin:10px 0; }
+  label.check { flex-direction:row; align-items:center; gap:6px; text-transform:none; letter-spacing:0; font-size:13px; margin:2px 0 6px; }
+  .confirmbox { display:none; border:2px solid var(--accent); padding:10px 12px; margin:10px 0; background:#fff; font-size:14px; }
+  .confirmbox span { font-weight:600; margin-right:8px; }
+  .attach { font-size:13px; color:var(--muted); margin-top:6px; }
   @media (max-width:640px){ input.wide{min-width:100%} }
 </style>
 </head>
@@ -93,6 +97,8 @@
     <label>Institution<input class="wide" id="b-inst" value="University of Southern California"></label>
     <button type="submit" id="b-run">Build brief</button>
   </form>
+  <label class="check"><input type="checkbox" id="b-confirm" checked> Pause after the identity card so I can confirm it is the right person</label>
+  <div class="confirmbox" id="b-confirmbox"><span>Is this the right person?</span> <button type="button" onclick="answerConfirm(true)">Yes, research this person</button> <button type="button" class="secondary" onclick="answerConfirm(false)">No, stop</button></div>
   <div class="muted" id="b-cost">A real brief takes about 5 minutes and about $1 in model and search calls.</div>
   <div class="stages" id="b-stages"></div>
   <div class="card" id="b-identity"></div>
@@ -136,12 +142,19 @@ const REASONS = {
   out_of_scope: ["Out of scope", "hard rule 5: health, contact details, religion, ethnicity, immigration, criminal history"],
 };
 
-function stream(url, onLine, onDone, onError) {
+let currentBriefJob = null;
+function stream(url, onLine, onDone, onError, onConfirm) {
   const es = new EventSource(url);
   es.onmessage = e => onLine(JSON.parse(e.data));
   es.addEventListener("done", e => { es.close(); onDone(JSON.parse(e.data)); });
-  es.addEventListener("error", e => { es.close(); onError(e.data ? JSON.parse(e.data).error : "connection lost"); });
+  es.addEventListener("confirm", e => { if (onConfirm) onConfirm(JSON.parse(e.data)); });
+  es.addEventListener("error", e => { es.close(); onError(e.data ? JSON.parse(e.data).error : "connection lost (the job keeps running; reload to reattach)"); });
   return es;
+}
+async function answerConfirm(ok) {
+  $("b-confirmbox").style.display = "none";
+  if (!currentBriefJob) return;
+  try { await post(`/api/briefs/${currentBriefJob}/confirm`, {ok}); } catch (e) { $("b-err").textContent = e.message; }
 }
 function appendLog(el, line) { el.style.display = "block"; el.textContent += line + "\n"; el.scrollTop = el.scrollHeight; }
 async function post(url, body) { const r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); if (!r.ok) throw new Error((await r.json()).detail || r.statusText); return r.json(); }
@@ -184,25 +197,39 @@ async function runBrief(ev) {
   const anchors = {}; if ($("b-employer").value) anchors.employer = $("b-employer").value; if ($("b-school").value) anchors.school = $("b-school").value; if ($("b-city").value) anchors.city = $("b-city").value;
   $("b-err").textContent = ""; $("b-log").textContent = ""; $("b-identity").textContent = ""; $("b-identity").style.display = "none"; $("b-stats").innerHTML = ""; $("b-open").innerHTML = "";
   resetStages(); setStage("identity", null, "active"); $("b-run").disabled = true;
-  const t0 = Date.now(); let identityLines = [];
   try {
-    const {job_id} = await post("/api/briefs", {name: $("b-name").value, anchors, institution: $("b-inst").value, mode: "live"});
-    stream(`/api/briefs/${job_id}/events`, l => {
-      appendLog($("b-log"), l);
-      const tag = (l.match(/^\[\w+\]/) || [null])[0];
-      if (!tag) { identityLines.push(l); $("b-identity").style.display = "block"; $("b-identity").textContent = identityLines.join("\n"); return; }
-      if (identityLines.length) setStage("identity", "card confirmed", "done");
-      const k = STAGE_KEY[tag]; if (!k) return;
-      setStage(k, l.replace(tag, "").trim().slice(0, 60), "done"); nextStage(k);
-    }, d => {
-      $("b-run").disabled = false; setStage("done", `${d.wall_seconds}s`, "done");
-      const c = d.counts;
-      $("b-stats").innerHTML = [["Claims extracted", c.claims_extracted],["Verified", c.claims_verified],["Dropped in code", c.claims_dropped],["Set aside (identity)", c.claims_flagged_identity||0],["Sources cited", d.sources],["Conflicts shown", c.conflicts||0],["Time", d.wall_seconds+"s"],["Cost", "$"+(+d.cost_usd).toFixed(2)]].map(([k,v]) => `<div><small>${k}</small>${v}</div>`).join("");
-      $("b-open").innerHTML = `<a class="cta" href="${d.html_url}" target="_blank">Open the brief →</a> <span class="muted">· <a href="${d.html_url.replace('brief.html','evidence.csv')}">evidence.csv</a> · <a href="${d.html_url.replace('brief.html','run_report.json')}">run report</a></span>`;
-      loadRuns();
-    }, e => { $("b-run").disabled = false; $("b-err").textContent = e; });
+    const {job_id} = await post("/api/briefs", {name: $("b-name").value, anchors, institution: $("b-inst").value, mode: "live", confirm_identity: $("b-confirm").checked});
+    attachBrief(job_id);
   } catch (e) { $("b-run").disabled = false; $("b-err").textContent = e.message; }
   return false;
+}
+function attachBrief(job_id) {
+  currentBriefJob = job_id; let identityLines = [];
+  $("b-run").disabled = true;
+  stream(`/api/briefs/${job_id}/events`, l => {
+    appendLog($("b-log"), l);
+    const tag = (l.match(/^\[\w+\]/) || [null])[0];
+    if (!tag) { identityLines.push(l); $("b-identity").style.display = "block"; $("b-identity").textContent = identityLines.join("\n"); return; }
+    if (tag === "[confirm]") { if (l.includes("confirmed")) { $("b-confirmbox").style.display = "none"; setStage("identity", "card confirmed", "done"); } return; }
+    if (identityLines.length) setStage("identity", "card confirmed", "done");
+    const k = STAGE_KEY[tag]; if (!k) return;
+    setStage(k, l.replace(tag, "").trim().slice(0, 60), "done"); nextStage(k);
+  }, d => {
+    $("b-run").disabled = false; $("b-confirmbox").style.display = "none"; setStage("done", `${d.wall_seconds}s`, "done");
+    const c = d.counts;
+    $("b-stats").innerHTML = [["Claims extracted", c.claims_extracted],["Verified", c.claims_verified],["Dropped in code", c.claims_dropped],["Set aside (identity)", c.claims_flagged_identity||0],["Sources cited", d.sources],["Conflicts shown", c.conflicts||0],["Time", d.wall_seconds+"s"],["Cost", "$"+(+d.cost_usd).toFixed(2)]].map(([k,v]) => `<div><small>${k}</small>${v}</div>`).join("");
+    $("b-open").innerHTML = `<a class="cta" href="${d.html_url}" target="_blank">Open the brief →</a> <span class="muted">· <a href="${d.html_url.replace('brief.html','evidence.csv')}">evidence.csv</a> · <a href="${d.html_url.replace('brief.html','run_report.json')}">run report</a></span>`;
+    loadRuns();
+  }, e => { $("b-run").disabled = false; $("b-confirmbox").style.display = "none"; $("b-err").textContent = e; },
+  () => { $("b-confirmbox").style.display = "block"; $("b-confirmbox").scrollIntoView({behavior:"smooth", block:"center"}); });
+}
+async function reattach() {
+  // after a reload, pick up the newest running brief and signal-watch jobs
+  const jobs = await (await fetch("/api/jobs")).json();
+  const b = jobs.find(j => j.kind === "brief" && j.status === "running");
+  if (b) { resetStages(); setStage("identity", null, "active"); $("b-name").value = b.label; $("b-log").textContent = ""; $("b-err").innerHTML = `<span class="attach">Reattached to the run for ${esc(b.label)} started ${Math.round((Date.now()/1000 - b.started)/60)} min ago.</span>`; attachBrief(b.job_id); }
+  const sg = jobs.find(j => j.kind === "signals" && j.status === "running");
+  if (sg) { $("sig-run").disabled = true; stream(`/api/signals/${sg.job_id}/events`, l => appendLog($("sig-log"), l), d => { $("sig-run").disabled = false; renderSignals(d.rows, d.html_url, $("sig-log").textContent.trim().split("\n").pop().replace(/^\[done\]\s*/, "")); }, e => { $("sig-run").disabled = false; $("sig-err").textContent = e; }); }
 }
 
 // ---- trust check
@@ -229,7 +256,7 @@ async function loadRuns() {
   const runs = await (await fetch("/api/briefs")).json();
   $("runs-list").innerHTML = runs.length ? runs.slice(0, 12).map(r => `<li><span><a href="${r.html_url}" target="_blank">${esc(r.subject)}</a> ${r.fixture ? '<span class="pill">fixture</span>' : ''} <span class="muted">${esc((r.finished_at||"").replace("T"," ").slice(0,16))}</span></span><span class="muted">${r.counts.claims_verified ?? "?"} verified · ${r.counts.sources_cited ?? "?"} sources · ${r.wall_seconds}s · $${(+r.cost_usd).toFixed(2)}</span></li>`).join("") : '<li class="muted">No runs yet.</li>';
 }
-resetStages(); loadRuns(); loadLatestSignals("live");
+resetStages(); loadRuns(); loadLatestSignals("live"); reattach();
 </script>
 </body>
 </html>

@@ -29,7 +29,7 @@ def _stream(url: str):
 
 
 def test_fixture_brief_streams_and_exposes_traps():
-    r = client.post("/api/briefs", json={"name": "Dorian Vexley-Marsh", "anchors": {"employer": "Halcyon Reef Capital", "school": "University of Southern California"}, "institution": "University of Southern California", "mode": "fixture"})
+    r = client.post("/api/briefs", json={"name": "Dorian Vexley-Marsh", "anchors": {"employer": "Halcyon Reef Capital", "school": "University of Southern California"}, "institution": "University of Southern California", "mode": "fixture", "confirm_identity": False})
     assert r.status_code == 200
     job = r.json()["job_id"]
     lines, done, err = _stream(f"/api/briefs/{job}/events")
@@ -63,3 +63,40 @@ def test_fixture_signals_job_and_latest():
 def test_index_served():
     r = client.get("/")
     assert r.status_code == 200 and "prospect-brief" in r.text
+
+
+def _wait_for_confirm(job: str, timeout: float = 30.0) -> dict:
+    """Poll /api/jobs instead of reading a partial SSE stream (closing a stream early can hang the test client)."""
+    import time
+
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        j = next(x for x in client.get("/api/jobs").json() if x["job_id"] == job)
+        if j["awaiting_confirm"] or j["status"] != "running":
+            return j
+        time.sleep(0.1)
+    raise AssertionError("job never asked for confirmation")
+
+
+def test_identity_confirmation_gate_and_reattach():
+    r = client.post("/api/briefs", json={"name": "Dorian Vexley-Marsh", "anchors": {"employer": "Halcyon Reef Capital"}, "mode": "fixture", "confirm_identity": True})
+    job = r.json()["job_id"]
+    j = _wait_for_confirm(job)
+    assert j["awaiting_confirm"] and j["status"] == "running"
+    assert client.post(f"/api/briefs/{job}/confirm", json={"ok": True}).json() == {"ok": True}
+    lines, done, err = _stream(f"/api/briefs/{job}/events")
+    assert err is None and done and "[confirm] waiting for you to confirm the identity card" in lines and "[confirm] identity confirmed" in lines
+    assert any(l.startswith("Identity card:") for l in lines)
+    # a second attach (a reloaded page) replays the full log and the done event
+    lines2, done2, _ = _stream(f"/api/briefs/{job}/events")
+    assert lines2 == lines and done2 == done
+    assert client.post(f"/api/briefs/{job}/confirm", json={"ok": True}).status_code == 409
+
+
+def test_identity_rejection_stops_the_run():
+    r = client.post("/api/briefs", json={"name": "Dorian Vexley-Marsh", "anchors": {"employer": "Halcyon Reef Capital"}, "mode": "fixture", "confirm_identity": True})
+    job = r.json()["job_id"]
+    _wait_for_confirm(job)
+    client.post(f"/api/briefs/{job}/confirm", json={"ok": False})
+    lines, done, err = _stream(f"/api/briefs/{job}/events")
+    assert done is None and err and "identity" in err["error"].lower()

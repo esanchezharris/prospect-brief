@@ -6,8 +6,8 @@ from __future__ import annotations
 import asyncio
 import csv
 import json
-import queue
 import threading
+import time
 import uuid
 from pathlib import Path
 from typing import Any, Literal
@@ -22,19 +22,40 @@ from ..pipeline import IdentityUnresolved, make_run_id, run_brief
 from ..signals.pipeline import run_signals
 
 STATIC = Path(__file__).parent / "static"
-_SENTINEL = object()
 
 
 class Job:
-    def __init__(self) -> None:
-        self.q: queue.Queue = queue.Queue()
+    """A pipeline run in a thread. Log lines are kept so a page can reattach after a reload."""
+
+    def __init__(self, kind: str, label: str) -> None:
+        self.kind, self.label = kind, label
+        self.lines: list[str] = []
         self.status = "running"
         self.result: dict[str, Any] = {}
         self.error: str | None = None
+        self.cond = threading.Condition()
+        self.awaiting_confirm = False
+        self.confirm_event = threading.Event()
+        self.confirm_answer = False
+        self.started = time.time()
 
     def emit(self, line: str) -> None:
-        for ln in str(line).splitlines():
-            self.q.put(ln)
+        with self.cond:
+            self.lines.extend(str(line).splitlines())
+            self.cond.notify_all()
+
+    def finish(self) -> None:
+        with self.cond:
+            self.cond.notify_all()
+
+    def confirm(self, card) -> bool:
+        """Human-in-the-loop: block until the page answers, or 20 minutes."""
+        self.awaiting_confirm = True
+        self.emit("[confirm] waiting for you to confirm the identity card")
+        ok = self.confirm_event.wait(timeout=1200) and self.confirm_answer
+        self.awaiting_confirm = False
+        self.emit("[confirm] identity confirmed" if ok else "[confirm] not confirmed; stopping")
+        return ok
 
 
 JOBS: dict[str, Job] = {}
@@ -57,6 +78,7 @@ class BriefRequest(BaseModel):
     anchors: dict[str, str] = Field(default_factory=dict)
     institution: str = "University of Southern California"
     mode: Literal["live", "fixture"] = "live"
+    confirm_identity: bool = True
 
 
 class SignalsRequest(BaseModel):
@@ -85,7 +107,7 @@ def _brief_worker(job: Job, req: BriefRequest) -> None:
 
         async def go():
             try:
-                return await run_brief(subject=req.name, anchors=req.anchors, institution=req.institution, config=cfg, llm=llm, search=search, run_dir=run_dir, transport=transport, log=job.emit, yes=True)
+                return await run_brief(subject=req.name, anchors=req.anchors, institution=req.institution, config=cfg, llm=llm, search=search, run_dir=run_dir, transport=transport, log=job.emit, confirm=job.confirm, yes=not req.confirm_identity)
             finally:
                 await search.aclose()
 
@@ -98,7 +120,7 @@ def _brief_worker(job: Job, req: BriefRequest) -> None:
     except Exception as e:  # surfaced to the page, never swallowed
         job.status, job.error = "error", f"{type(e).__name__}: {e}"
     finally:
-        job.q.put(_SENTINEL)
+        job.finish()
 
 
 def _signals_worker(job: Job, req: SignalsRequest) -> None:
@@ -121,7 +143,7 @@ def _signals_worker(job: Job, req: SignalsRequest) -> None:
     except Exception as e:
         job.status, job.error = "error", f"{type(e).__name__}: {e}"
     finally:
-        job.q.put(_SENTINEL)
+        job.finish()
 
 
 def _read_signal_rows(csv_path: Path) -> list[dict]:
@@ -133,22 +155,35 @@ def _read_signal_rows(csv_path: Path) -> list[dict]:
 
 
 def _sse(job: Job):
+    """Replays every line so far, then follows the job. Any number of pages can attach."""
+
     def gen():
+        i = 0
         while True:
-            try:
-                item = job.q.get(timeout=15)
-            except queue.Empty:
-                yield ": keepalive\n\n"
-                continue
-            if item is _SENTINEL:
-                if job.status == "done":
-                    yield f"event: done\ndata: {json.dumps(job.result)}\n\n"
-                else:
-                    yield f"event: error\ndata: {json.dumps({'error': job.error})}\n\n"
+            with job.cond:
+                if i >= len(job.lines) and job.status == "running":
+                    job.cond.wait(timeout=15)
+                chunk = job.lines[i:]
+                i = len(job.lines)
+                status = job.status
+            for ln in chunk:
+                yield f"data: {json.dumps(ln)}\n\n"
+                if ln.startswith("[confirm] waiting"):
+                    yield f"event: confirm\ndata: {json.dumps({'job_id': job_id_of(job)})}\n\n"
+            if status == "done":
+                yield f"event: done\ndata: {json.dumps(job.result)}\n\n"
                 return
-            yield f"data: {json.dumps(item)}\n\n"
+            if status == "error":
+                yield f"event: error\ndata: {json.dumps({'error': job.error})}\n\n"
+                return
+            if not chunk:
+                yield ": keepalive\n\n"
 
     return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+def job_id_of(job: Job) -> str:
+    return next(k for k, v in JOBS.items() if v is job)
 
 
 def _job_or_404(job_id: str) -> Job:
@@ -174,9 +209,27 @@ def start_brief(req: BriefRequest) -> dict:
     if not req.anchors:
         raise HTTPException(400, "at least one anchor is required")
     job_id = uuid.uuid4().hex[:12]
-    job = JOBS[job_id] = Job()
+    job = JOBS[job_id] = Job("brief", req.name)
     threading.Thread(target=_brief_worker, args=(job, req), daemon=True).start()
     return {"job_id": job_id}
+
+
+@app.post("/api/briefs/{job_id}/confirm")
+def confirm_brief(job_id: str, body: dict) -> dict:
+    job = _job_or_404(job_id)
+    if not job.awaiting_confirm:
+        raise HTTPException(409, "job is not waiting for confirmation")
+    job.confirm_answer = bool(body.get("ok", False))
+    job.confirm_event.set()
+    return {"ok": job.confirm_answer}
+
+
+@app.get("/api/jobs")
+def list_jobs() -> list[dict]:
+    """Running and recent jobs, newest first, so a reloaded page can reattach."""
+    out = [{"job_id": k, "kind": j.kind, "label": j.label, "status": j.status, "awaiting_confirm": j.awaiting_confirm, "started": j.started, "result": j.result if j.status == "done" else None, "error": j.error} for k, j in JOBS.items()]
+    out.sort(key=lambda x: -x["started"])
+    return out[:20]
 
 
 @app.get("/api/briefs/{job_id}/events")
@@ -212,7 +265,7 @@ def brief_evidence(run_id: str) -> dict:
 @app.post("/api/signals")
 def start_signals(req: SignalsRequest) -> dict:
     job_id = uuid.uuid4().hex[:12]
-    job = JOBS[job_id] = Job()
+    job = JOBS[job_id] = Job("signals", req.institution)
     threading.Thread(target=_signals_worker, args=(job, req), daemon=True).start()
     return {"job_id": job_id}
 

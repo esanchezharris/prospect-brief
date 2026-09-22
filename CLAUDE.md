@@ -29,7 +29,7 @@ Not in v1, on purpose: FEC contribution data, county property records, outreach 
 
 - Python 3.12, `uv`, pydantic v2 models in `models.py`, type hints, small modules, pytest. `uv run pytest -q` must be green before each milestone commit.
 - All model calls go through `LLMProvider` in `llm.py`; every prompt and response is logged to `runs/<run_id>/llm/`. Structured output via `client.messages.parse(..., output_format=PydanticModel)`.
-- Model IDs and prices live in `config/default.yaml`, never hardcoded. Current: `claude-sonnet-5` ($2/$10 per MTok) for extraction and writing, `claude-haiku-4-5-20251001` ($1/$5) for cheap checks.
+- Model IDs and prices live in `config/default.yaml`, never hardcoded. Current: `claude-sonnet-5` ($2/$10 per MTok) for planning, identity and extraction; `claude-opus-5-5` ($4/$20) for the single final writing call; `claude-haiku-4-5-20251001` ($1/$5) for cheap checks.
 - Tests never call real APIs: `FakeLLM` + `MockSearchProvider` + httpx `MockTransport`.
 - Out-of-spec ideas go in IDEAS.md. Do not build them.
 - Commit after each milestone; report what works, what was cut, the exact command, and time and cost of the last real run.
