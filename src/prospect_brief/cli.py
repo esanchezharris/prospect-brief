@@ -51,6 +51,9 @@ def run(name: str, anchors: tuple[str, ...], institution: str, yes: bool, config
         from .testing import build_fake_llm, fixture_transport, mock_search
 
         transport = fixture_transport()
+        config.root = config.root / ".fixture"  # fixture runs never touch the real cache or outputs
+        run_dir = config.runs_dir / run_dir.name
+        run_dir.mkdir(parents=True, exist_ok=True)
     if llm_name == "fake":
         llm = build_fake_llm(run_dir)
     else:
@@ -104,6 +107,7 @@ def signals(institution: str, days: int, forms: str, config_path: Path | None, l
 
         llm = build_fake_llm(None)
         transport = fixture_transport()
+        config.root = config.root / ".fixture"  # fixture runs never touch the real cache or outputs
     else:
         if not os.environ.get("ANTHROPIC_API_KEY"):
             raise click.ClickException("ANTHROPIC_API_KEY is empty. Add it to .env (see .env.example).")
@@ -129,7 +133,8 @@ def eval(slug: str, run_id: str | None, config_path: Path | None) -> None:
 
     config = Config.load(config_path)
     spec = load_eval(config.root / "eval" / f"{slug}.yaml")
-    runs = sorted(config.briefs_dir.glob("*/brief.json"))
+    runs = sorted(config.briefs_dir.glob("*/brief.json")) + sorted((config.root / ".fixture" / "briefs").glob("*/brief.json"))
+    runs.sort(key=lambda r: r.parent.name)
     if run_id:
         runs = [r for r in runs if r.parent.name == run_id]
     else:

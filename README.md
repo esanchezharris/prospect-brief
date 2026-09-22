@@ -29,7 +29,8 @@ pages), `brief.json`, `evidence.csv` (every extracted claim, including the ones 
 and why), and `run_report.json` (counts, time, tokens, estimated cost). Every model prompt and
 response is logged under `runs/<run_id>/llm/`.
 
-Run the pipeline on the fictional test person, with no API keys and no network:
+Run the pipeline on the fictional test person, with no API keys and no network (fixture runs write
+under `.fixture/` so they never touch the real cache or outputs):
 
 ```bash
 uv run prospect-brief run "Dorian Vexley-Marsh" --anchor employer="Halcyon Reef Capital" --institution "University of Southern California" --search mock --llm fake --yes

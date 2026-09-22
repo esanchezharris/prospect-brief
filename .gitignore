@@ -4,6 +4,7 @@ cache/
 briefs/
 signals/
 eval/out/
+.fixture/
 .venv/
 __pycache__/
 *.pyc
