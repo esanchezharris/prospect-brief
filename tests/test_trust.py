@@ -88,3 +88,10 @@ def test_year_total_and_lifetime_total_do_not_conflict():
     y = _ev("t4", "MacKenzie Scott was married to Jeff Bezos for 25 years.", "https://b.example/4", section="background", ctype="personal")
     corroborate_and_conflict([a, b, m, y], "MacKenzie Scott")
     assert not a.conflicts_with and not m.conflicts_with
+
+
+def test_amount_with_breakdown_is_not_a_conflict():
+    a = _ev("h1", "MacKenzie Scott gave $80 million to Howard University.", "https://a.example/1")
+    b = _ev("h2", "MacKenzie Scott donated $80 million to Howard University, including $63 million for the endowment.", "https://b.example/2")
+    corroborate_and_conflict([a, b], "MacKenzie Scott")
+    assert not a.conflicts_with

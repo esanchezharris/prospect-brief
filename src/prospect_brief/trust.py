@@ -177,7 +177,8 @@ def _is_conflict(a_claim: str, b_claim: str, sim: int) -> bool:
     ya = {y for y in wa if _YEAR_RE.match(y)}
     yb = {y for y in wb if _YEAR_RE.match(y)}
     if ma and mb:
-        return ma != mb and (not ya or not yb or ya == yb)
+        # "$80 million" vs "$80 million, including $63 million for X" agree; a subset is not a conflict
+        return not (ma <= mb or mb <= ma) and (not ya or not yb or ya == yb)
     if not ma and not mb:
         # "published in 2005, won an award in 2006" is not in conflict with "published in 2005"
         return bool(ya and yb) and not (ya <= yb or yb <= ya) and sim >= 90
