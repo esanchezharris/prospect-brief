@@ -85,7 +85,17 @@ uv run prospect-brief eval <slug>
 
 It prints a recall table and writes `eval/out/<slug>-precision-audit.csv` (mark each sampled claim
 correct or not) and `eval/out/<slug>-eval.json`. The fictional subject's file is
-`eval/dorian-vexley-marsh.yaml`.
+`eval/dorian-vexley-marsh.yaml`; files for real people go in `eval/real/`, which is gitignored.
+
+- `--all-runs` prints one line per brief for the subject (recall, verified claims, sources, time,
+  cost, writer model) to see run-to-run variance.
+- `--judge` asks the author model whether each of the 25 sampled claims is supported by its quote
+  on its own, as a precision estimate (about 5 cents); `--judge-all` does it for every verified
+  claim (about 50 cents). The hand audit in the CSV remains the ground truth.
+
+Measured on two public-figure subjects in September 2026: recall 7 to 9 of 11 and 8 of 10 known
+facts across seven runs; model-judged precision 89% and 92% of verified claims before the
+"quote must reference the subject" rule was added in response to those results.
 
 Tests:
 
