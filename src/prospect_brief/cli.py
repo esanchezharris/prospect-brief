@@ -127,8 +127,10 @@ def signals(institution: str, days: int, forms: str, config_path: Path | None, l
 @click.argument("slug")
 @click.option("--run-id", default=None, help="Brief run to evaluate (default: the latest brief for the subject)")
 @click.option("--all-runs", is_flag=True, help="Score every brief for the subject and print a run-to-run table")
+@click.option("--judge", is_flag=True, help="Also ask the author model whether each sampled claim is supported by its quote (precision estimate, ~$0.05)")
+@click.option("--judge-all", is_flag=True, help="Judge every verified claim, not just the 25-claim sample (~$0.50 per brief)")
 @click.option("--config", "config_path", type=click.Path(exists=True, path_type=Path), default=None)
-def eval(slug: str, run_id: str | None, all_runs: bool, config_path: Path | None) -> None:
+def eval(slug: str, run_id: str | None, all_runs: bool, judge: bool, judge_all: bool, config_path: Path | None) -> None:
     """Score briefs against eval/SLUG.yaml (or eval/real/SLUG.yaml): recall of known facts, plus a precision audit CSV."""
     import json
 
@@ -157,7 +159,12 @@ def eval(slug: str, run_id: str | None, all_runs: bool, config_path: Path | None
             click.echo(f"{b.report.run_id:<42} {res['recalled']:>3}/{res['facts']:<4} {res['verified_claims']:>8} {b.report.counts.get('sources_cited', 0):>7} {b.report.wall_seconds:>5.0f}s {b.report.cost_usd:>6.2f}  {writer}")
         return
     brief = Brief.model_validate_json(runs[-1].read_text())
-    result = evaluate(brief, spec["facts"])
+    result = evaluate(brief, spec["facts"], sample_size=10_000 if judge_all else 25)
+    if judge or judge_all:
+        from .evaluate import judge_precision
+        from .llm import AnthropicProvider
+
+        result["judge"] = judge_precision(AnthropicProvider(config, config.runs_dir / f"eval-{slug}"), result["precision_sample"])
     audit, summary = write_outputs(result, config.root / "eval" / "out", slug)
     click.echo(format_table(result))
     click.echo(f"\nPrecision audit sample: {audit}\nSummary: {summary}")
