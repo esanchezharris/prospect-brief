@@ -133,6 +133,7 @@ const REASONS = {
   quote_contains_instruction: ["Injected instruction", "quote reads like an instruction to the model"],
   wealth_estimate_not_allowed: ["Net-worth estimate", "hard rule 3: never carry a wealth estimate"],
   quote_too_short: ["Quote too short", "under 12 characters"],
+  out_of_scope: ["Out of scope", "hard rule 5: health, contact details, religion, ethnicity, immigration, criminal history"],
 };
 
 function stream(url, onLine, onDone, onError) {
