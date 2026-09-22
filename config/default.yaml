@@ -56,6 +56,9 @@ blocklist:                         # never fetched, never searched (hard rule 1)
   - windfalldata.com
   - donorsearch.net
   - iwave.com
+  - fec.gov                    # FEC data is out of v1 by design (SPEC.md), so nothing from it is fetched
+  - opensecrets.org
+  - followthemoney.org
   - blocked.example            # fixture domain used by tests
 tiers:                             # M2; 1 = primary/official, 2 = established news, 3 = everything else
   tier1_suffixes: [sec.gov, propublica.org, irs.gov, usc.edu, fixture.example]   # fixture.example stands in for the institution in tests
