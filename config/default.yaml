@@ -1,6 +1,6 @@
 models:
   writer: claude-sonnet-5          # extraction, planning, writing (Sonnet-class per SPEC.md)
-  checker: claude-haiku-4-5-20251001  # cheap yes/no checks (entailment)
+  checker: claude-sonnet-5         # entailment check (c). Haiku 4.5 was measured as noisier: on 261 verified claims it re-dropped 31 (4 real) vs Sonnet 16 (5 real); +$0.10/brief
   author: claude-opus-5-5          # the one final call that writes the brief prose from verified evidence
 prices_per_mtok:                   # USD, input/output, from platform.claude.com/docs/en/about-claude/pricing (Sep 22, 2026)
   claude-sonnet-5: {input: 2.00, output: 10.00}

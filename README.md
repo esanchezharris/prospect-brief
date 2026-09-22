@@ -96,8 +96,10 @@ correct or not) and `eval/out/<slug>-eval.json`. The fictional subject's file is
 Measured on two public-figure subjects in September 2026: recall 7 to 9 of 11 and 8 of 10 known
 facts across eight runs. Model-judged precision was 89% and 92% of verified claims; judging every
 claim showed the misses were quote fragments that never said who did the thing, so a code rule now
-requires the quote to reference the subject. On the next run precision was 99% (217 of 219) with
-recall unchanged.
+requires the quote to reference the subject. On the next runs precision was 99% (217 of 219) and 95%
+(249 of 261) with recall unchanged. The entailment checker was then compared on the same 261
+claims: Haiku 4.5 re-dropped 31 (4 of them real misses) and Sonnet 5 dropped 16 (5 real), so the
+checker now runs on Sonnet 5 for about ten cents more per brief.
 
 Tests:
 
