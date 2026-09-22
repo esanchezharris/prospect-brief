@@ -145,3 +145,59 @@ class Brief(BaseModel):
     evidence: list[Evidence]
     gaps: list[str] = Field(default_factory=list)
     report: RunReport
+
+
+# --- signal watch ---------------------------------------------------------------------
+
+
+class FilingHit(BaseModel):
+    adsh: str
+    filename: str
+    form: str
+    root_form: str
+    file_date: str
+    display_name: str
+    company: str
+    ticker: str | None = None
+    cik: str
+    items: list[str] = Field(default_factory=list)
+
+    @property
+    def url(self) -> str:
+        return f"https://www.sec.gov/Archives/edgar/data/{int(self.cik)}/{self.adsh.replace('-', '')}/{self.filename}"
+
+    @property
+    def index_url(self) -> str:
+        return f"https://www.sec.gov/Archives/edgar/data/{int(self.cik)}/{self.adsh.replace('-', '')}/"
+
+
+class PassageExtraction(BaseModel):
+    passage_index: int = Field(description="Index of the passage this was extracted from.")
+    person_name: str = Field(description="Full name of the person the passage is about, or empty if none.")
+    role: str = Field(description="Their role at the filing company as stated, e.g. 'Chief Financial Officer', 'director'.")
+    company: str = Field(description="The company the role is at, as stated.")
+    is_bio: bool = Field(description="True only when the passage is a biography of a person who studied or worked at the institution.")
+    affiliation_as_stated: str = Field(description="The exact affiliation with the institution as the filing states it, e.g. 'B.A. in Economics from the University of Southern California'.")
+    quote: str = Field(description="Verbatim passage, max 300 chars, containing the affiliation statement.")
+    confidence: float = Field(ge=0, le=1)
+
+
+class PassageExtractions(BaseModel):
+    extractions: list[PassageExtraction]
+
+
+class Signal(BaseModel):
+    person_name: str
+    company: str
+    ticker: str | None = None
+    role: str
+    event: str
+    filing_date: str
+    form: str
+    affiliation_as_stated: str
+    quote: str
+    confidence: float
+    filing_urls: list[str]
+    status: Status = "verified"
+    drop_reason: str | None = None
+    command: str = ""

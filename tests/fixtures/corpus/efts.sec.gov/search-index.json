@@ -1,0 +1,67 @@
+{
+ "hits": {
+  "total": {
+   "value": 3,
+   "relation": "eq"
+  },
+  "hits": [
+   {
+    "_id": "0000900000-26-000001:coralline-s1.htm",
+    "_source": {
+     "ciks": [
+      "0009000001"
+     ],
+     "display_names": [
+      "Coralline Therapeutics, Inc.  (CRLN)  (CIK 0009000001)"
+     ],
+     "root_forms": [
+      "S-1"
+     ],
+     "form": "S-1",
+     "file_date": "2026-09-10",
+     "adsh": "0000900000-26-000001",
+     "items": []
+    }
+   },
+   {
+    "_id": "0000900000-26-000002:harborline-8k.htm",
+    "_source": {
+     "ciks": [
+      "0009000002"
+     ],
+     "display_names": [
+      "Harborline Robotics Corp.  (CIK 0009000002)"
+     ],
+     "root_forms": [
+      "8-K"
+     ],
+     "form": "8-K",
+     "file_date": "2026-08-20",
+     "adsh": "0000900000-26-000002",
+     "items": [
+      "1.01",
+      "9.01"
+     ]
+    }
+   },
+   {
+    "_id": "0000900000-26-000003:tidewater-def14a.htm",
+    "_source": {
+     "ciks": [
+      "0009000003"
+     ],
+     "display_names": [
+      "Tidewater Shipping Holdings  (TDWS)  (CIK 0009000003)"
+     ],
+     "root_forms": [
+      "DEF 14A"
+     ],
+     "form": "DEF 14A",
+     "file_date": "2026-07-30",
+     "adsh": "0000900000-26-000003",
+     "items": []
+    }
+   }
+  ]
+ }
+}

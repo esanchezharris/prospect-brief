@@ -130,7 +130,7 @@ GET https://efts.sec.gov/LATEST/search-index?q=%22University%20of%20Southern%20C
 User-Agent: prospect-brief <CONTACT_EMAIL>
 ```
 
-The response has `hits.total.value` and `hits.hits[]`; each hit has `_source` fields including `file_date`, `form`, `display_names[]`, `ciks[]`, and the accession number, and an `_id` of the form `<accession>:<filename>`. Filing documents live at `https://www.sec.gov/Archives/edgar/data/<cik>/<accession with dashes removed>/<filename>`. Stay under 10 requests per second, always send the declared User-Agent, cache every response.
+The response has `hits.total.value` and `hits.hits[]`; each hit has `_source` fields including `file_date`, `form`, `root_forms[]`, `display_names[]`, `ciks[]`, `items[]` (8-K item numbers such as `5.02`), and the accession number in a field named `adsh`, and an `_id` of the form `<adsh>:<filename>`. Pages hold 100 hits; paginate with `&from=N`. `forms=S-1` also returns `S-1/A`. (Confirmed against the live API on Sep 21, 2026.) Filing documents live at `https://www.sec.gov/Archives/edgar/data/<cik>/<accession with dashes removed>/<filename>`. Stay under 10 requests per second, always send the declared User-Agent, cache every response.
 
 **Forms, ranked by how much money is moving:** S-1 and S-1/A (IPO registration: management bios and share holdings), 8-K (Item 5.02, appointment of directors and officers, usually with a bio), DEF 14A (proxy statement: director and officer bios, compensation, holdings). Add 10-K only if there is time.
 

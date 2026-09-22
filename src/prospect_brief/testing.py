@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from .config import ROOT
 from .llm import FakeLLM
-from .models import BriefDraft, BriefSection, ExtractionResult, PlannedQuery, RawClaim, ResearchPlan, Sentence, TalkingPoint
+from .models import BriefDraft, BriefSection, ExtractionResult, PassageExtraction, PassageExtractions, PlannedQuery, RawClaim, ResearchPlan, Sentence, TalkingPoint
 from .search import MockSearchProvider
 
 CORPUS = ROOT / "tests" / "fixtures" / "corpus"
@@ -31,6 +31,16 @@ class FixtureTransport(httpx.AsyncBaseTransport):
         self.requests.append(url)
         host = request.url.host or ""
         path = request.url.path.lstrip("/") or "index.html"
+        if host == "efts.sec.gov":
+            import json
+
+            data = json.loads((self.corpus / "efts.sec.gov" / "search-index.json").read_text())
+            want = request.url.params.get("forms", "")
+            fam = {"S-1": "S-1", "8-K": "8-K", "DEF14A": "DEF 14A"}.get(want, want)
+            hits = [h for h in data["hits"]["hits"] if h["_source"]["root_forms"][0] == fam]
+            if request.url.params.get("from"):
+                hits = []
+            return httpx.Response(200, json={"hits": {"total": {"value": len(hits), "relation": "eq"}, "hits": hits}}, request=request)
         p = self.corpus / host / path
         if not p.exists():
             return httpx.Response(404, text="not found", request=request)
@@ -163,5 +173,35 @@ def _write(system: str, user: str, schema: type[BaseModel]) -> BaseModel:
     return BriefDraft(sections=sections, talking_points=tps)
 
 
+# --- scripted signal-watch extractions, keyed by filing company -----------------------------
+
+SIGNAL_SCRIPTS: dict[str, PassageExtraction] = {
+    # real bio: kept
+    "Coralline Therapeutics, Inc.": PassageExtraction(
+        passage_index=0, person_name="Priya Ellsworth-Nakamura", role="Chief Scientific Officer", company="Coralline Therapeutics, Inc.", is_bio=True,
+        affiliation_as_stated="Ph.D. in Biomedical Engineering from the University of Southern California in 2009",
+        quote="She received a Ph.D. in Biomedical Engineering from the University of Southern California in 2009", confidence=0.95),
+    # licensing-deal noise: dropped as not_bio
+    "Harborline Robotics Corp.": PassageExtraction(
+        passage_index=0, person_name="", role="", company="Harborline Robotics Corp.", is_bio=False,
+        affiliation_as_stated="exclusive license agreement with the University of Southern California",
+        quote="entered into an exclusive license agreement with the University of Southern California covering certain patents", confidence=0.9),
+    # bio whose quote is not in the document: dropped as quote_not_in_source
+    "Tidewater Shipping Holdings": PassageExtraction(
+        passage_index=0, person_name="Marisol Quenneville-Adair", role="director", company="Tidewater Shipping Holdings", is_bio=True,
+        affiliation_as_stated="M.B.A. from the University of Southern California in 1999",
+        quote="Ms. Quenneville-Adair earned her M.B.A. from the University of Southern California in 1999", confidence=0.8),
+}
+
+_FILING_RE = re.compile(r"^Filing: .+? by (?P<company>.+?), filed ", re.M)
+
+
+def _signals(system: str, user: str, schema: type[BaseModel]) -> BaseModel:
+    m = _FILING_RE.search(user)
+    company = m["company"] if m else ""
+    x = SIGNAL_SCRIPTS.get(company)
+    return PassageExtractions(extractions=[x] if x else [])
+
+
 def build_fake_llm(run_dir: Path | None) -> FakeLLM:
-    return FakeLLM({"plan": _plan, "extract-": _extract, "write-": _write}, run_dir)
+    return FakeLLM({"plan": _plan, "extract-": _extract, "write-": _write, "signals-": _signals}, run_dir)
