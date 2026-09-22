@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>prospect-brief</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --ink:#1b1b1b; --muted:#5f5b53; --rule:#c9c4b8; --paper:#fffdf8; --accent:#7a1f1f; --card:#f4f1ea; --ok:#2f6b3a; --warn:#8a5a00; --bad:#8b1a1a; }
+  html { background:#e9e6df; }
+  body { margin:0; color:var(--ink); font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif; font-size:15px; line-height:1.5; }
+  .wrap { max-width:960px; margin:28px auto 60px; padding:0 20px; }
+  header.top { border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:22px; display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  header.top h1 { font-size:26px; margin:0; font-weight:600; letter-spacing:.01em; }
+  header.top .tag { color:var(--muted); font-size:14px; }
+  nav a { color:var(--accent); text-decoration:none; margin-left:14px; font-size:14px; }
+  section.panel { background:var(--paper); border:1px solid var(--rule); box-shadow:0 1px 4px rgba(0,0,0,.08); padding:20px 24px; margin-bottom:22px; }
+  section.panel h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em; margin:0 0 4px; color:var(--muted); font-weight:600; }
+  section.panel h2 span.step { display:inline-block; width:22px; height:22px; border:1px solid var(--ink); border-radius:50%; text-align:center; line-height:22px; font-size:12px; margin-right:8px; color:var(--ink); }
+  section.panel p.lead { margin:0 0 14px; }
+  form.row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin:6px 0 10px; }
+  label { display:flex; flex-direction:column; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  input, select { font:inherit; font-size:15px; padding:6px 8px; border:1px solid var(--rule); background:#fff; color:var(--ink); min-width:150px; }
+  input.wide { min-width:300px; }
+  button { font:inherit; font-size:14px; padding:7px 14px; border:1px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+  button.secondary { background:#fff; color:var(--ink); }
+  button:disabled { opacity:.5; cursor:default; }
+  .log { font-family:Menlo,Consolas,monospace; font-size:12.5px; background:var(--card); border:1px solid var(--rule); padding:10px 12px; max-height:260px; overflow:auto; white-space:pre-wrap; margin-top:10px; display:none; }
+  .stages { display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:6px; margin:12px 0 4px; }
+  .stage { border:1px solid var(--rule); padding:6px 8px; font-size:12.5px; color:var(--muted); background:#fff; }
+  .stage b { display:block; color:var(--ink); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+  .stage.done { border-color:var(--ok); } .stage.done b::after { content:" ✓"; color:var(--ok); }
+  .stage.active { border-color:var(--ink); background:var(--card); } .stage.active b::after { content:" …"; }
+  .stats { display:flex; gap:18px; flex-wrap:wrap; margin:12px 0; font-size:14px; }
+  .stats div { border-top:2px solid var(--ink); padding-top:4px; min-width:90px; }
+  .stats div small { display:block; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+  table { border-collapse:collapse; width:100%; font-size:13px; margin-top:10px; }
+  th, td { text-align:left; vertical-align:top; padding:5px 6px; border-bottom:1px solid var(--rule); }
+  th { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; }
+  tbody tr:nth-child(even) { background:#faf8f2; }
+  td.name { font-weight:600; white-space:nowrap; }
+  td .aff { font-size:13px; }
+  q.short { display:block; color:var(--muted); font-size:12px; margin-top:2px; }
+  td.name { min-width:130px; }
+  q { font-style:italic; }
+  .pill { display:inline-block; font-size:11px; border:1px solid var(--rule); border-radius:3px; padding:0 5px; color:var(--muted); white-space:nowrap; }
+  .pill.bad { color:var(--bad); border-color:var(--bad); } .pill.warn { color:var(--warn); border-color:var(--warn); } .pill.ok { color:var(--ok); border-color:var(--ok); }
+  .card { background:var(--card); border:1px solid var(--rule); padding:10px 12px; font-family:Menlo,Consolas,monospace; font-size:12.5px; white-space:pre-wrap; margin-top:10px; display:none; }
+  a { color:var(--accent); }
+  .cta { font-size:16px; font-weight:600; }
+  .muted { color:var(--muted); font-size:13px; }
+  .err { color:var(--bad); margin-top:8px; }
+  .traps { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:10px; margin:12px 0; }
+  .trap { border:1px solid var(--rule); padding:8px 10px; font-size:13px; background:#fff; }
+  .trap b { display:block; font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+  .trap .n { font-size:22px; font-weight:600; color:var(--bad); }
+  ul.runs { list-style:none; padding:0; margin:8px 0 0; } ul.runs li { padding:5px 0; border-bottom:1px solid var(--rule); font-size:14px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .notice { border-left:3px solid var(--accent); padding:6px 10px; background:var(--card); font-size:13.5px; margin:10px 0; }
+  @media (max-width:640px){ input.wide{min-width:100%} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div><h1>prospect-brief</h1><div class="tag">Source-cited donor briefings from public records. Every sentence carries its source. No wealth-screening data, no capacity scores, no CRM.</div></div>
+  <nav><a href="#signals">Signal watch</a><a href="#brief">Build a brief</a><a href="#trust">Trust check</a><a href="#runs">Previous runs</a></nav>
+</header>
+
+<section class="panel" id="signals">
+  <h2><span class="step">1</span>Signal watch</h2>
+  <p class="lead">Who with a stated affiliation to the institution appeared in SEC filings recently? IPO registrations, officer and director appointments, proxy statements. Public EDGAR filings only.</p>
+  <form class="row" onsubmit="return runSignals(event)">
+    <label>Institution (exact phrase)<input class="wide" id="sig-inst" value="University of Southern California"></label>
+    <label>Days<input id="sig-days" type="number" value="90" style="min-width:80px"></label>
+    <button type="submit" id="sig-run">Run signal watch</button>
+    <button type="button" class="secondary" onclick="loadLatestSignals('live')">Load latest</button>
+    <button type="button" class="secondary" onclick="runSignals(null,'fixture')" title="Three fake filings from the test fixture">Fixture</button>
+  </form>
+  <div class="log" id="sig-log"></div>
+  <div class="err" id="sig-err"></div>
+  <div id="sig-summary" class="muted"></div>
+  <div id="sig-table"></div>
+  <div class="notice" style="display:none" id="sig-note">This is where production would match names against the CRM. The demo stops at the list: pick a name and build the brief.</div>
+</section>
+
+<section class="panel" id="brief">
+  <h2><span class="step">2</span>Build a brief</h2>
+  <p class="lead">Name plus at least one identity anchor. The tool resolves identity first, then researches, verifies every claim in code, and writes the brief from verified evidence only.</p>
+  <form class="row" onsubmit="return runBrief(event)">
+    <label>Full name<input class="wide" id="b-name" placeholder="MacKenzie Scott"></label>
+    <label>Employer / company<input id="b-employer" placeholder="Yield Giving"></label>
+    <label>School<input id="b-school" placeholder="Princeton University"></label>
+    <label>City<input id="b-city" placeholder="Seattle"></label>
+    <label>Institution<input class="wide" id="b-inst" value="University of Southern California"></label>
+    <button type="submit" id="b-run">Build brief</button>
+  </form>
+  <div class="muted" id="b-cost">A real brief takes about 5 minutes and about $1 in model and search calls.</div>
+  <div class="stages" id="b-stages"></div>
+  <div class="card" id="b-identity"></div>
+  <div class="log" id="b-log"></div>
+  <div class="err" id="b-err"></div>
+  <div class="stats" id="b-stats"></div>
+  <div id="b-open"></div>
+</section>
+
+<section class="panel" id="trust">
+  <h2><span class="step">3</span>Trust check</h2>
+  <p class="lead">The same pipeline on a fictional person whose corpus contains planted traps: a fabricated quote, a wrong dollar figure, a claim its quote doesn't support, a namesake, a page that disagrees on an amount, a blocked site, a robots.txt-forbidden page, and a hidden "ignore previous instructions". No keys, no network, a few seconds.</p>
+  <form class="row" onsubmit="return runTrust(event)"><button type="submit" id="t-run">Run on the fictional test subject</button></form>
+  <div class="log" id="t-log"></div>
+  <div class="err" id="t-err"></div>
+  <div class="traps" id="t-traps"></div>
+  <div id="t-open"></div>
+  <div id="t-table"></div>
+</section>
+
+<section class="panel" id="runs">
+  <h2><span class="step">4</span>Previous runs</h2>
+  <ul class="runs" id="runs-list"><li class="muted">Loading…</li></ul>
+</section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const STAGES = [["identity","Identity"],["plan","Plan"],["search","Search"],["fetch","Fetch"],["structured","Filings & IRS"],["extract","Extract"],["verify","Verify"],["write","Write"],["done","Render"]];
+const STAGE_KEY = {"[plan]":"plan","[search]":"search","[fetch]":"fetch","[edgar]":"structured","[propublica]":"structured","[extract]":"extract","[verify]":"verify","[done]":"done"};
+const REASONS = {
+  quote_not_in_source: ["Fabricated quote", "quote not found in the cached source"],
+  specific_missing: ["Wrong figure or name", "a number, date or name in the claim is not in its quote"],
+  entailment: ["Quote does not support claim", "cheap model check answered 'partially' or 'no'"],
+  possibly_different_person: ["Namesake", "document has no confirmed identity anchor"],
+  quote_near_instruction: ["Injected instruction", "quote sits inside text addressed to the model"],
+  quote_contains_instruction: ["Injected instruction", "quote reads like an instruction to the model"],
+  wealth_estimate_not_allowed: ["Net-worth estimate", "hard rule 3: never carry a wealth estimate"],
+  quote_too_short: ["Quote too short", "under 12 characters"],
+};
+
+function stream(url, onLine, onDone, onError) {
+  const es = new EventSource(url);
+  es.onmessage = e => onLine(JSON.parse(e.data));
+  es.addEventListener("done", e => { es.close(); onDone(JSON.parse(e.data)); });
+  es.addEventListener("error", e => { es.close(); onError(e.data ? JSON.parse(e.data).error : "connection lost"); });
+  return es;
+}
+function appendLog(el, line) { el.style.display = "block"; el.textContent += line + "\n"; el.scrollTop = el.scrollHeight; }
+async function post(url, body) { const r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); if (!r.ok) throw new Error((await r.json()).detail || r.statusText); return r.json(); }
+
+// ---- signal watch
+function renderSignals(rows, htmlUrl, summary) {
+  $("sig-summary").innerHTML = summary ? esc(summary) + (htmlUrl ? ` · <a href="${htmlUrl}" target="_blank">open as document</a>` : "") : "";
+  if (!rows.length) { $("sig-table").innerHTML = '<p class="muted">No rows.</p>'; return; }
+  $("sig-table").innerHTML = `<table><thead><tr><th>#</th><th>Name</th><th>Company</th><th>Role</th><th>Event</th><th>Affiliation as stated</th><th>Filing</th><th></th></tr></thead><tbody>` +
+    rows.map((r,i) => `<tr><td>${i+1}</td><td class="name">${esc(r.name)}</td><td>${esc(r.company)}${r.ticker ? " ("+esc(r.ticker)+")" : ""}</td><td>${esc(r.role)}</td><td><span class="pill">${esc(r.form)}</span> ${esc(r.event)}</td><td title="${esc(r.quote)}"><div class="aff">${esc(r.affiliation_as_stated)}</div><q class="short">${esc((r.quote||"").slice(0,90))}${(r.quote||"").length>90?"…":""}</q></td><td>${(r.filing_urls||[]).map((u,j)=>`<a href="${esc(u)}" target="_blank">${j+1}</a>`).join(" ")}</td><td><button class="secondary" onclick='prefill(${JSON.stringify(r.name)}, ${JSON.stringify(r.company)})'>Build brief</button></td></tr>`).join("") + `</tbody></table>`;
+  $("sig-note").style.display = "block";
+}
+async function loadLatestSignals(mode) {
+  $("sig-err").textContent = "";
+  const d = await (await fetch(`/api/signals/latest?mode=${mode}`)).json();
+  renderSignals(d.rows, d.html_url, d.rows.length ? `${d.rows.length} people from the latest run` : "No previous run found. Click Run signal watch.");
+}
+async function runSignals(ev, mode="live") {
+  if (ev) ev.preventDefault();
+  $("sig-err").textContent = ""; $("sig-log").textContent = ""; $("sig-table").innerHTML = ""; $("sig-summary").textContent = "";
+  $("sig-run").disabled = true;
+  try {
+    const {job_id} = await post("/api/signals", {institution: $("sig-inst").value, days: +$("sig-days").value, mode});
+    stream(`/api/signals/${job_id}/events`, l => appendLog($("sig-log"), l), d => { $("sig-run").disabled = false; const last = $("sig-log").textContent.trim().split("\n").pop(); renderSignals(d.rows, d.html_url, last.replace(/^\[done\]\s*/, "")); },
+      e => { $("sig-run").disabled = false; $("sig-err").textContent = e; });
+  } catch (e) { $("sig-run").disabled = false; $("sig-err").textContent = e.message; }
+  return false;
+}
+function prefill(name, company) {
+  $("b-name").value = name; $("b-employer").value = company; $("b-school").value = $("sig-inst").value; $("b-city").value = "";
+  document.getElementById("brief").scrollIntoView({behavior:"smooth"}); $("b-name").focus();
+}
+
+// ---- brief
+function resetStages() { $("b-stages").innerHTML = STAGES.map(([k,t]) => `<div class="stage" id="st-${k}"><b>${t}</b><span>–</span></div>`).join(""); }
+function setStage(k, text, state) { const el = $("st-"+k); if (!el) return; el.className = "stage " + state; if (text) el.querySelector("span").textContent = text; }
+function nextStage(k) { const i = STAGES.findIndex(s => s[0] === k); if (i >= 0 && i+1 < STAGES.length) setStage(STAGES[i+1][0], null, "active"); }
+async function runBrief(ev) {
+  ev.preventDefault();
+  const anchors = {}; if ($("b-employer").value) anchors.employer = $("b-employer").value; if ($("b-school").value) anchors.school = $("b-school").value; if ($("b-city").value) anchors.city = $("b-city").value;
+  $("b-err").textContent = ""; $("b-log").textContent = ""; $("b-identity").textContent = ""; $("b-identity").style.display = "none"; $("b-stats").innerHTML = ""; $("b-open").innerHTML = "";
+  resetStages(); setStage("identity", null, "active"); $("b-run").disabled = true;
+  const t0 = Date.now(); let identityLines = [];
+  try {
+    const {job_id} = await post("/api/briefs", {name: $("b-name").value, anchors, institution: $("b-inst").value, mode: "live"});
+    stream(`/api/briefs/${job_id}/events`, l => {
+      appendLog($("b-log"), l);
+      const tag = (l.match(/^\[\w+\]/) || [null])[0];
+      if (!tag) { identityLines.push(l); $("b-identity").style.display = "block"; $("b-identity").textContent = identityLines.join("\n"); return; }
+      if (identityLines.length) setStage("identity", "card confirmed", "done");
+      const k = STAGE_KEY[tag]; if (!k) return;
+      setStage(k, l.replace(tag, "").trim().slice(0, 60), "done"); nextStage(k);
+    }, d => {
+      $("b-run").disabled = false; setStage("done", `${d.wall_seconds}s`, "done");
+      const c = d.counts;
+      $("b-stats").innerHTML = [["Claims extracted", c.claims_extracted],["Verified", c.claims_verified],["Dropped in code", c.claims_dropped],["Set aside (identity)", c.claims_flagged_identity||0],["Sources cited", d.sources],["Conflicts shown", c.conflicts||0],["Time", d.wall_seconds+"s"],["Cost", "$"+(+d.cost_usd).toFixed(2)]].map(([k,v]) => `<div><small>${k}</small>${v}</div>`).join("");
+      $("b-open").innerHTML = `<a class="cta" href="${d.html_url}" target="_blank">Open the brief →</a> <span class="muted">· <a href="${d.html_url.replace('brief.html','evidence.csv')}">evidence.csv</a> · <a href="${d.html_url.replace('brief.html','run_report.json')}">run report</a></span>`;
+      loadRuns();
+    }, e => { $("b-run").disabled = false; $("b-err").textContent = e; });
+  } catch (e) { $("b-run").disabled = false; $("b-err").textContent = e.message; }
+  return false;
+}
+
+// ---- trust check
+async function runTrust(ev) {
+  ev.preventDefault();
+  $("t-err").textContent = ""; $("t-log").textContent = ""; $("t-traps").innerHTML = ""; $("t-table").innerHTML = ""; $("t-open").innerHTML = ""; $("t-run").disabled = true;
+  try {
+    const {job_id} = await post("/api/briefs", {name: "Dorian Vexley-Marsh", anchors: {employer: "Halcyon Reef Capital", school: "University of Southern California", city: "Long Beach"}, institution: "University of Southern California", mode: "fixture"});
+    stream(`/api/briefs/${job_id}/events`, l => appendLog($("t-log"), l), async d => {
+      $("t-run").disabled = false;
+      const ev = await (await fetch(`/api/briefs/${d.run_id}/evidence`)).json();
+      const bad = ev.rows.filter(r => r.status !== "verified");
+      const byReason = {}; bad.forEach(r => { const k = (r.drop_reason||"").split(":")[0]; (byReason[k] = byReason[k] || []).push(r); });
+      $("t-traps").innerHTML = Object.entries(byReason).sort((a,b)=>b[1].length-a[1].length).map(([k,rows]) => { const [title, why] = REASONS[k] || [k, ""]; return `<div class="trap"><b>${esc(title)}</b><span class="n">${rows.length}</span> <span class="muted">${esc(why)}</span></div>`; }).join("");
+      $("t-open").innerHTML = `<span class="muted">${ev.rows.length} claims extracted, ${ev.rows.filter(r=>r.status==="verified").length} verified, ${bad.length} rejected.</span> <a class="cta" href="${d.html_url}" target="_blank">Open the fixture brief →</a>`;
+      $("t-table").innerHTML = `<table><thead><tr><th>Rejected claim</th><th>Its quote</th><th>Reason</th><th>Source</th></tr></thead><tbody>` + bad.map(r => `<tr><td>${esc(r.claim)}</td><td><q>${esc(r.quote.slice(0,140))}</q></td><td><span class="pill ${r.status==='flagged'?'warn':'bad'}">${esc(r.drop_reason)}</span></td><td class="muted">${esc(r.publisher)}</td></tr>`).join("") + `</tbody></table>`;
+    }, e => { $("t-run").disabled = false; $("t-err").textContent = e; });
+  } catch (e) { $("t-run").disabled = false; $("t-err").textContent = e.message; }
+  return false;
+}
+
+// ---- runs
+async function loadRuns() {
+  const runs = await (await fetch("/api/briefs")).json();
+  $("runs-list").innerHTML = runs.length ? runs.slice(0, 12).map(r => `<li><span><a href="${r.html_url}" target="_blank">${esc(r.subject)}</a> ${r.fixture ? '<span class="pill">fixture</span>' : ''} <span class="muted">${esc((r.finished_at||"").replace("T"," ").slice(0,16))}</span></span><span class="muted">${r.counts.claims_verified ?? "?"} verified · ${r.counts.sources_cited ?? "?"} sources · ${r.wall_seconds}s · $${(+r.cost_usd).toFixed(2)}</span></li>`).join("") : '<li class="muted">No runs yet.</li>';
+}
+resetStages(); loadRuns(); loadLatestSignals("live");
+</script>
+</body>
+</html>

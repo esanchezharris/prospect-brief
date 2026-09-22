@@ -30,7 +30,7 @@ from .sources.institution import collect_institution_urls
 from .sources.propublica import collect_propublica
 from .textnorm import normalize
 from .trust import apply_identity, check_entailment, corroborate_and_conflict, mark_stale, source_tier
-from .verify import is_wealth_estimate, looks_like_instruction, quote_in_source, specifics_in_quote
+from .verify import is_out_of_scope, is_wealth_estimate, looks_like_instruction, quote_in_source, specifics_in_quote
 from .write import write_brief
 
 
@@ -65,6 +65,10 @@ def verify_evidence(items: list[Evidence], docs_by_key: dict[str, Document], con
         w = is_wealth_estimate(e.claim, e.supporting_quote)
         if not w.passed:
             e.status, e.drop_reason = "dropped", w.reason
+            continue
+        o = is_out_of_scope(e.claim, e.supporting_quote)
+        if not o.passed:
+            e.status, e.drop_reason = "dropped", o.reason
             continue
         doc = docs_by_key.get(e.cache_key)
         a = quote_in_source(e.supporting_quote, doc.text if doc else "", partial_ratio_min=thr)

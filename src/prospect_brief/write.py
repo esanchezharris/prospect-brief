@@ -36,14 +36,26 @@ def _evidence_table(evidence: list[Evidence]) -> str:
     return "\n".join(rows)
 
 
-def _post_check(draft: BriefDraft, valid_ids: set[str], factual_keys: set[str]) -> tuple[BriefDraft, int, int]:
+MAX_CITATIONS_PER_SENTENCE = 3
+
+
+def _rank_ids(ids: list[str], by_id: dict[str, Evidence]) -> list[str]:
+    """Keep the strongest few citations: lower tier first, corroborated first, then the writer's order."""
+    order = {i: n for n, i in enumerate(ids)}
+    return sorted(ids, key=lambda i: (by_id[i].source_tier, 0 if by_id[i].corroborated_by else 1, order[i]))[:MAX_CITATIONS_PER_SENTENCE]
+
+
+def _post_check(draft: BriefDraft, valid_ids: set[str], factual_keys: set[str], by_id: dict[str, Evidence] | None = None) -> tuple[BriefDraft, int, int]:
     """Delete factual sentences lacking a valid evidence id. Returns (draft, kept, deleted)."""
     kept = deleted = 0
+    by_id = by_id or {}
     sections: list[BriefSection] = []
     for sec in draft.sections:
         sents: list[Sentence] = []
         for s in sec.sentences:
-            ids = [i for i in s.evidence_ids if i in valid_ids]
+            ids = [i for i in dict.fromkeys(s.evidence_ids) if i in valid_ids]
+            if by_id:
+                ids = _rank_ids(ids, by_id)
             text = _ID_RE.sub("", s.text).strip()
             if sec.key in factual_keys and not ids:
                 deleted += 1
@@ -51,7 +63,7 @@ def _post_check(draft: BriefDraft, valid_ids: set[str], factual_keys: set[str]) 
             kept += 1
             sents.append(Sentence(text=text, evidence_ids=ids))
         sections.append(BriefSection(key=sec.key, sentences=sents))
-    tps = [TalkingPoint(text=t.text, evidence_ids=[i for i in t.evidence_ids if i in valid_ids]) for t in draft.talking_points]
+    tps = [TalkingPoint(text=t.text, evidence_ids=(_rank_ids([i for i in dict.fromkeys(t.evidence_ids) if i in valid_ids], by_id) if by_id else [i for i in t.evidence_ids if i in valid_ids])) for t in draft.talking_points]
     tps = [t for t in tps if t.evidence_ids]
     return BriefDraft(sections=sections, talking_points=tps), kept, deleted
 
@@ -71,7 +83,7 @@ def write_brief(llm: LLMProvider, config: Config, subject: str, institution: str
     for attempt in range(2):
         stats["attempts"] += 1
         raw = llm.structured(purpose=f"write-{attempt + 1}", role="writer", system=SYSTEM, user=user, schema=BriefDraft, max_tokens=8000)
-        draft, kept, deleted = _post_check(raw, valid_ids, factual_keys)
+        draft, kept, deleted = _post_check(raw, valid_ids, factual_keys, {e.id: e for e in verified})
         stats["sentences_kept"], stats["sentences_deleted"] = kept, deleted
         total = kept + deleted
         if total == 0 or deleted / total <= max_frac:

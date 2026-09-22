@@ -205,3 +205,10 @@ async def test_institution_domain_collection(result):
     brief, *_ = result
     assert brief.report.counts["institution_domain_urls"] >= 1
     assert any(e.section == "institution" and e.status == "verified" for e in brief.evidence)
+
+
+async def test_out_of_scope_health_detail_is_dropped(result):
+    brief, html_path, *_ = result
+    knee = [e for e in brief.evidence if "knee surgery" in e.claim]
+    assert knee and knee[0].status == "dropped" and knee[0].drop_reason == "out_of_scope:health"
+    assert "knee" not in html_path.read_text()

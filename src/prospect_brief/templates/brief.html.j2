@@ -5,26 +5,33 @@
 <title>Prospect brief: {{ brief.subject }}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root { --ink:#1b1b1b; --muted:#5a5a5a; --rule:#c9c4b8; --paper:#fffdf8; --accent:#7a1f1f; --card:#f6f3ec; }
+  :root { --ink:#1b1b1b; --muted:#5a5a5a; --rule:#c9c4b8; --paper:#fffdf8; --accent:#7a1f1f; --card:#f6f3ec; --ok:#2f6b3a; }
   @page { size: letter; margin: 0.8in; }
   html { background:#e9e6df; }
   body { margin:0; color:var(--ink); font-family: "Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif; font-size:11.5pt; line-height:1.45; }
   .page { background:var(--paper); max-width:8.5in; margin:24px auto; padding:0.8in; box-shadow:0 1px 6px rgba(0,0,0,.12); }
-  header { border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:18px; }
-  header h1 { font-size:22pt; margin:0 0 4px; font-weight:600; letter-spacing:.01em; }
-  header .meta { color:var(--muted); font-size:10pt; }
-  header .meta div { margin-top:2px; }
-  .notice { font-size:9.5pt; color:var(--muted); border:1px solid var(--rule); padding:5px 8px; margin-top:8px; }
-  h2 { font-size:12.5pt; margin:18px 0 6px; padding-bottom:2px; border-bottom:1px solid var(--rule); font-weight:600; text-transform:uppercase; letter-spacing:.06em; }
+  header { border-bottom:2px solid var(--ink); padding-bottom:12px; margin-bottom:18px; }
+  header .kicker { font-size:9.5pt; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+  header h1 { font-size:24pt; margin:2px 0 8px; font-weight:600; letter-spacing:.005em; line-height:1.15; }
+  dl.anchors { display:grid; grid-template-columns:max-content 1fr; gap:1px 12px; margin:0 0 10px; font-size:10pt; }
+  dl.anchors dt { color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-size:8.5pt; padding-top:2px; }
+  dl.anchors dd { margin:0; }
+  .notice { font-size:9.5pt; color:var(--muted); border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:5px 0; }
+  sup.legend { font-size:7.5pt; color:var(--accent); } sup .c { font-size:6.5pt; margin-left:1px; }
+  h2 { font-size:11.5pt; margin:20px 0 6px; padding-bottom:3px; border-bottom:1px solid var(--rule); font-weight:600; text-transform:uppercase; letter-spacing:.08em; }
   p { margin:0 0 8px; text-align:left; }
   .empty { color:var(--muted); font-style:italic; }
   sup.fn { font-size:7.5pt; line-height:0; position:relative; }
   sup.fn a { color:var(--accent); text-decoration:none; padding:0 1px; }
   sup.fn a:hover, sup.fn a:focus { text-decoration:underline; }
   sup.fn a.t3::after { content:"°"; }
+  sup.fn a .c { font-size:6.5pt; margin-left:1px; }
+  sup.sep { font-size:7.5pt; line-height:0; color:var(--accent); }
+  .card::after { content:""; position:absolute; left:8px; bottom:-6px; border-width:6px 6px 0; border-style:solid; border-color:var(--rule) transparent transparent; }
+  .tier.corr { color:var(--ok, #2f6b3a); }
   .conflict { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:6px 0 10px; }
   .conflict div { border:1px solid var(--rule); padding:6px 8px; font-size:10pt; background:var(--card); }
-  .card { display:none; position:absolute; left:0; bottom:1.4em; z-index:10; width:340px; background:var(--card); color:var(--ink); border:1px solid var(--rule); box-shadow:0 2px 10px rgba(0,0,0,.15); padding:9px 11px; font-size:9pt; line-height:1.35; font-weight:normal; text-align:left; white-space:normal; }
+  .card { display:none; position:absolute; left:-8px; bottom:1.6em; z-index:10; width:360px; background:var(--card); color:var(--ink); border:1px solid var(--rule); box-shadow:0 2px 10px rgba(0,0,0,.15); padding:9px 11px; font-size:9pt; line-height:1.35; font-weight:normal; text-align:left; white-space:normal; }
   sup.fn:hover .card, sup.fn:focus-within .card { display:block; }
   .card q { display:block; font-style:italic; margin-bottom:5px; }
   .card .src { color:var(--muted); }
@@ -36,7 +43,10 @@
   ol.sources { font-size:9.5pt; padding-left:1.6em; }
   ol.sources li { margin-bottom:4px; }
   ol.sources a { color:var(--accent); word-break:break-all; }
-  .summary-line { margin-top:22px; padding-top:8px; border-top:1px solid var(--rule); font-size:9pt; color:var(--muted); }
+  table.verif { border-collapse:collapse; margin-top:22px; width:100%; font-size:9pt; }
+  table.verif th { text-align:left; font-weight:600; text-transform:uppercase; letter-spacing:.06em; font-size:7.5pt; color:var(--muted); border-top:2px solid var(--ink); padding:4px 6px 0 0; }
+  table.verif td { padding:2px 6px 4px 0; font-size:11pt; }
+  .summary-line { margin-top:4px; padding-top:6px; border-top:1px solid var(--rule); font-size:9pt; color:var(--muted); }
   .gaps li { margin-bottom:3px; }
   @media print {
     html { background:#fff; } .page { box-shadow:none; margin:0; padding:0; max-width:none; }
@@ -48,17 +58,17 @@
 <body>
 <div class="page">
 <header>
+  <div class="kicker">Prospect brief · {{ brief.institution }} · {{ brief.generated_at.strftime('%B %-d, %Y') }}</div>
   <h1>{{ brief.subject }}</h1>
-  <div class="meta">
-    <div><strong>Prospect brief</strong> for {{ brief.institution }}</div>
-    <div>Identity anchors: {% for k, v in brief.anchors.items() %}{{ k }} = {{ v }}{% if not loop.last %}; {% endif %}{% endfor %}</div>
-    <div>Generated {{ brief.generated_at.strftime('%B %-d, %Y %H:%M UTC') }}</div>
-  </div>
-  <div class="notice">Prepared from public sources only. No wealth-screening data used. Every factual sentence carries a numbered source; hover or click a number to see the supporting passage.</div>
+  <dl class="anchors">
+    {% for k, v in brief.anchors.items() %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}
+    {% if brief.identity and brief.identity.current_role %}<dt>role</dt><dd>{{ brief.identity.current_role }}</dd>{% endif %}
+  </dl>
+  <div class="notice">Prepared from public sources only. No wealth-screening data used. Every factual sentence carries a numbered source: hover or click the number for the supporting passage; <sup class="legend">n<span class="c">c</span></sup> marks a fact found in two or more independent sources; ° marks a tier-3 source.</div>
 </header>
 
 {% macro sentence(s) -%}
-{{ s.text }}{% for eid in s.evidence_ids %}{% set n = fn_numbers[eid] %}{% set e = evidence_by_id[eid] %}<sup class="fn"><a href="#src-{{ n }}" class="{{ 't3' if e.source_tier == 3 }}" title="{{ 'tier 3 source' if e.source_tier == 3 else '' }}">{{ n }}</a><span class="card" role="tooltip"><q>{{ e.supporting_quote }}</q><span class="src">{{ e.publisher }}{% if e.published_date %} · {{ e.published_date }}{% endif %}<span class="tier">tier {{ e.source_tier }}</span><br><a href="{{ e.source_url }}" target="_blank" rel="noopener">{{ e.source_url }}</a></span></span></sup>{% endfor %}
+{{ s.text }}{% for eid in s.evidence_ids %}{% set n = fn_numbers[eid] %}{% set e = evidence_by_id[eid] %}{% if not loop.first %}<sup class="sep">,</sup>{% endif %}<sup class="fn"><a href="#src-{{ n }}" class="{{ 't3' if e.source_tier == 3 }}" title="{{ 'tier 3 source' if e.source_tier == 3 else '' }}">{{ n }}{% if e.corroborated_by %}<span class="c">c</span>{% endif %}</a><span class="card" role="tooltip"><q>{{ e.supporting_quote }}</q><span class="src">{{ e.publisher }}{% if e.published_date %} · {{ e.published_date }}{% endif %}<span class="tier">tier {{ e.source_tier }}</span>{% if e.corroborated_by %}<span class="tier corr">corroborated by {{ e.corroborated_by|length }} independent source{{ 's' if e.corroborated_by|length != 1 }}</span>{% endif %}<br><a href="{{ e.source_url }}" target="_blank" rel="noopener">{{ e.source_url }}</a></span></span></sup>{% endfor %}
 {%- endmacro %}
 
 {% for sec in section_meta %}
@@ -102,6 +112,7 @@
 <p class="ai">Nonprofit financial data is from IRS filings via <a href="https://projects.propublica.org/nonprofits/" target="_blank" rel="noopener">ProPublica Nonprofit Explorer</a>, used under its noncommercial terms with attribution.</p>
 {% endif %}
 
+<table class="verif"><thead><tr>{% for k, v in verification %}<th>{{ k }}</th>{% endfor %}</tr></thead><tbody><tr>{% for k, v in verification %}<td>{{ v }}</td>{% endfor %}</tr></tbody></table>
 <div class="summary-line">{{ summary_line }}</div>
 </div>
 </body>

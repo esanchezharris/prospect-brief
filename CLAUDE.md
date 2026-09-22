@@ -23,6 +23,7 @@ Not in v1, on purpose: FEC contribution data, county property records, outreach 
 - README "Safeguards" headings are exactly: Grounding, Citations, Confidence thresholds, Hallucination testing, Human-in-the-loop.
 - No CRM access, ever, in this repo.
 - Demo storyline: `prospect-brief signals ...` → pick a name → `prospect-brief run ...`. Same CLI, shared cache and Evidence schema.
+- `prospect-brief serve` (M5) is a FastAPI page in `web/` that calls the same `run_brief` / `run_signals` functions in threads and streams log lines over SSE. No logic lives in the web layer.
 
 ## Conventions
 

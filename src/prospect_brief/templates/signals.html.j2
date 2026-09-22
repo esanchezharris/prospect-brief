@@ -20,12 +20,14 @@
   td.name { font-weight:600; white-space:nowrap; }
   q { font-style:italic; color:#333; }
   .aff { color:var(--muted); font-size:9pt; }
-  code { display:block; font-family:Menlo,Consolas,monospace; font-size:8.5pt; background:var(--card); border:1px solid var(--rule); padding:4px 6px; margin-top:4px; white-space:pre-wrap; word-break:break-all; }
+  code { display:none; font-family:Menlo,Consolas,monospace; font-size:8.5pt; background:var(--card); border:1px solid var(--rule); padding:4px 6px; margin-top:4px; white-space:pre-wrap; word-break:break-all; }
+  button.copy { display:block; margin-top:4px; font:inherit; font-size:8.5pt; color:var(--accent); background:none; border:1px solid var(--rule); padding:1px 6px; cursor:pointer; }
+  tbody tr:nth-child(even) { background:#faf8f2; }
   a { color:var(--accent); }
   .form { display:inline-block; font-size:8pt; border:1px solid var(--rule); border-radius:3px; padding:0 4px; color:var(--muted); }
   .summary { margin-top:16px; padding-top:8px; border-top:1px solid var(--rule); font-size:9pt; color:var(--muted); }
   details { margin-top:14px; font-size:9pt; } details summary { cursor:pointer; color:var(--muted); }
-  @media print { html{background:#fff} .page{box-shadow:none;margin:0;padding:0;max-width:none} details{display:none} code{display:none} }
+  @media print { html{background:#fff} .page{box-shadow:none;margin:0;padding:0;max-width:none} details{display:none} code{display:block} button.copy{display:none} }
 </style>
 </head>
 <body><div class="page">
@@ -41,7 +43,7 @@
 {% for s in signals %}
 <tr>
 <td>{{ loop.index }}</td>
-<td class="name">{{ s.person_name }}<code>{{ s.command }}</code></td>
+<td class="name">{{ s.person_name }}<button class="copy" type="button" onclick="navigator.clipboard.writeText(this.nextElementSibling.textContent).then(()=>{this.textContent='copied';setTimeout(()=>this.textContent='copy brief command',1200)})">copy brief command</button><code>{{ s.command }}</code></td>
 <td>{{ s.company }}{% if s.ticker %} ({{ s.ticker }}){% endif %}</td>
 <td>{{ s.role }}</td>
 <td><span class="form">{{ s.form }}</span> {{ s.event }}</td>

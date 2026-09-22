@@ -148,5 +148,17 @@ def eval(slug: str, run_id: str | None, config_path: Path | None) -> None:
     click.echo(f"\nPrecision audit sample: {audit}\nSummary: {summary}")
 
 
+@main.command()
+@click.option("--host", default="127.0.0.1", show_default=True)
+@click.option("--port", default=8765, show_default=True)
+def serve(host: str, port: int) -> None:
+    """Start the demo web page (signal watch, brief builder with live progress, trust check)."""
+    import uvicorn
+
+    Config.load()  # loads .env so the workers see the keys
+    click.echo(f"prospect-brief demo page: http://{host}:{port}")
+    uvicorn.run("prospect_brief.web.app:app", host=host, port=port, log_level="warning")
+
+
 if __name__ == "__main__":
     sys.exit(main())

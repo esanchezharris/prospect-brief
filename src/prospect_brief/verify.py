@@ -151,6 +151,27 @@ _ESTIMATE_RE = re.compile(
     r"|billionaires? (?:index|list|ranking)|richest (?:people|women|men|person|americans)|giving capacity|capacity rating|wealth rating)", re.I)
 
 
+_OUT_OF_SCOPE = {
+    "health": re.compile(r"\b(?:(?:his|her|their) (?:health|illness|diagnosis|surgery|cancer|disease|disability|pregnancy|therapy|addiction|medication|mental health|dental work|dental care|medical (?:condition|treatment|bills?))|(?:was|were|is|are|been) (?:diagnosed|hospitali[sz]ed|treated for|recovering from|battling)|dental work|in remission|suffers? from)\b", re.I),
+    "contact": re.compile(r"(?:\b\d{3}[\s.-]\d{3}[\s.-]\d{4}\b|[\w.+-]+@[\w-]+\.[\w.]+|\b\d{1,5} [A-Z][\w]+ (?:Street|St\.|Avenue|Ave\.|Lane|Ln\.|Road|Rd\.|Drive|Dr\.|Boulevard|Blvd\.|Court|Ct\.|Way|Place|Pl\.)\b|\b(?:lives|resides|residing) at \d)", re.I),
+    "religion": re.compile(r"\b(?:(?:is|was|are|were) (?:a |an )?(?:devout|practicing|observant) |converted to (?:christianity|judaism|islam|catholicism|buddhism|hinduism)|attends (?:church|synagogue|mosque|temple) )", re.I),
+    "ethnicity": re.compile(r"\b(?:(?:his|her|their) (?:race|ethnicity|ethnic background|racial background)|(?:is|was) (?:of )?(?:african[- ]american|asian[- ]american|hispanic|latino|latina|white|black|caucasian|jewish|native american) (?:descent|heritage|origin|woman|man))\b", re.I),
+    "immigration": re.compile(r"\b(?:immigration status|undocumented|green card|(?:work|student|H-1B) visa|naturali[sz]ed citizen|asylum)\b", re.I),
+    "criminal": re.compile(r"\b(?:arrested|indicted|convicted|pleaded (?:guilty|no contest)|charged with|criminal (?:record|charges?)|sentenced to|felony|misdemeanor|DUI)\b", re.I),
+    "sexual_orientation": re.compile(r"\b(?:sexual orientation|came out as|(?:is|was) (?:gay|lesbian|bisexual|transgender|queer))\b", re.I),
+}
+
+
+def is_out_of_scope(claim: str, quote: str = "") -> CheckResult:
+    """Hard rule 5: categories the brief never carries, checked in code with deliberately narrow
+    patterns (a gift to a cancer center is fine; the subject's own diagnosis is not)."""
+    text = f"{claim} {quote}"
+    for cat, rx in _OUT_OF_SCOPE.items():
+        if rx.search(text):
+            return CheckResult(False, f"out_of_scope:{cat}")
+    return CheckResult(True)
+
+
 def is_wealth_estimate(claim: str, quote: str = "") -> CheckResult:
     """Hard rule 3: net worth and capacity figures are estimates even when a publisher prints them.
     The brief carries transactions and holdings, never a wealth number."""

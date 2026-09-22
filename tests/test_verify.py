@@ -1,6 +1,6 @@
 import random
 
-from prospect_brief.verify import extract_specifics, is_wealth_estimate, quote_in_source, specifics_in_quote
+from prospect_brief.verify import extract_specifics, is_out_of_scope, is_wealth_estimate, quote_in_source, specifics_in_quote
 
 SOURCE = """
 Dorian Vexley-Marsh, founder of Halcyon Reef Capital, announced a $12 million gift to the
@@ -105,3 +105,13 @@ def test_net_worth_estimates_are_never_evidence():
     assert not is_wealth_estimate("She ranks 40th on the Forbes list of richest people.").passed
     assert is_wealth_estimate("She sold a majority stake in Halcyon Reef Capital for $410 million.").passed
     assert is_wealth_estimate("Her 4% stake in Amazon was worth $35.6 billion at the time of the divorce, per the filing.").passed is False or True  # a sourced valuation of a specific holding is allowed only when quoted; regex is deliberately conservative
+
+
+def test_out_of_scope_guard_is_narrow():
+    assert is_out_of_scope("She received free dental work from a local dentist.").reason == "out_of_scope:health"
+    assert is_out_of_scope("He was diagnosed with cancer in 2019.").reason == "out_of_scope:health"
+    assert is_out_of_scope("Contact her at jane@example.com.").reason == "out_of_scope:contact"
+    assert is_out_of_scope("He was convicted of fraud in 2010.").reason == "out_of_scope:criminal"
+    assert is_out_of_scope("She donated $50 million to the cancer research center at UCLA.").passed
+    assert is_out_of_scope("He serves on the board of Children's Hospital Los Angeles.").passed
+    assert is_out_of_scope("She funded a health clinic in Watts.").passed

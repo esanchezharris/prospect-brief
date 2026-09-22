@@ -45,7 +45,14 @@ def number_sources(brief: Brief) -> tuple[dict[str, int], list[dict]]:
 def render_html(brief: Brief, config: Config, summary_line: str) -> str:
     numbers, sources = number_sources(brief)
     section_meta = config.get("brief_sections", default=[])
+    c = brief.report.counts
+    verification = [
+        ("Claims extracted", len(brief.evidence)), ("Verified", c.get("claims_verified", 0)), ("Dropped in code", c.get("claims_dropped", 0)),
+        ("Set aside (identity)", c.get("claims_flagged_identity", 0)), ("Corroborated", c.get("claims_corroborated", 0)), ("Sources cited", len(sources)),
+        ("Run time", f"{brief.report.wall_seconds:.0f}s"), ("Est. cost", f"${brief.report.cost_usd:.2f}"),
+    ]
     return _env().get_template("brief.html.j2").render(
+        verification=verification,
         brief=brief,
         section_meta=section_meta,
         sections_by_key={s.key: s for s in brief.sections},

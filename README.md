@@ -15,6 +15,40 @@ uv sync
 cp .env.example .env   # then fill in ANTHROPIC_API_KEY, TAVILY_API_KEY, CONTACT_EMAIL
 ```
 
+## Demo page
+
+```bash
+uv run prospect-brief serve
+```
+
+Opens http://127.0.0.1:8765: the signal watch, a brief builder with live progress, a trust check on
+the fictional test subject, and the list of previous runs. The page is a client of the same
+pipeline functions the CLI calls; nothing runs there that the CLI can't run.
+
+### 5-minute demo script
+
+Before the meeting: start the server, open the page, and start the real brief for your chosen
+subject so it is already streaming when you begin (about 5 minutes and about $1). Have the
+previous run's brief open in another tab as a fallback.
+
+1. **Signal watch (1 min).** Click *Load latest* (or *Run signal watch* if you have 90 seconds).
+   Point at one row: name, company, event, the verbatim affiliation quote, and the filing link.
+   Click *Build brief* to show the prefilled form. Say: production would match these names against
+   Salesforce; this demo stops at the list on purpose.
+2. **Trust check (1 min).** Click *Run on the fictional test subject*. In a few seconds the traps
+   appear with counts and reasons: the fabricated quote, the wrong dollar figure, the claim its quote
+   does not support, the hidden "ignore previous instructions", and the namesake dentist set aside.
+   Say: these checks run in code, not by asking the model whether it was honest.
+3. **The real brief (2 min).** Back in panel 2, the stages have landed. Open the brief. Hover two
+   footnotes to show the quotes; click one through to the live page. Scroll to the conflicts shown
+   side by side, then the numbered sources with tiers, then the verification table at the bottom.
+   Print preview: a clean 2-3 pages.
+4. **Safeguards (1 min).** The five headings below, in plain English, plus the time and cost line.
+
+If asked: identity is resolved and shown before any research; net-worth figures are dropped even
+when a publisher prints them; tier-3 sources are marked °; every dropped claim and its reason is in
+`evidence.csv`; nothing is committed about real people; no CRM access exists in this repo.
+
 ## Commands
 
 Build a brief (at least one `--anchor` is required; anchors are the facts that pin down which
