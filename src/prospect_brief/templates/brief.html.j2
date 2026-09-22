@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Prospect brief: {{ brief.subject }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --ink:#1b1b1b; --muted:#5a5a5a; --rule:#c9c4b8; --paper:#fffdf8; --accent:#7a1f1f; --card:#f6f3ec; }
+  @page { size: letter; margin: 0.8in; }
+  html { background:#e9e6df; }
+  body { margin:0; color:var(--ink); font-family: "Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif; font-size:11.5pt; line-height:1.45; }
+  .page { background:var(--paper); max-width:8.5in; margin:24px auto; padding:0.8in; box-shadow:0 1px 6px rgba(0,0,0,.12); }
+  header { border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:18px; }
+  header h1 { font-size:22pt; margin:0 0 4px; font-weight:600; letter-spacing:.01em; }
+  header .meta { color:var(--muted); font-size:10pt; }
+  header .meta div { margin-top:2px; }
+  .notice { font-size:9.5pt; color:var(--muted); border:1px solid var(--rule); padding:5px 8px; margin-top:8px; }
+  h2 { font-size:12.5pt; margin:18px 0 6px; padding-bottom:2px; border-bottom:1px solid var(--rule); font-weight:600; text-transform:uppercase; letter-spacing:.06em; }
+  p { margin:0 0 8px; text-align:left; }
+  .empty { color:var(--muted); font-style:italic; }
+  sup.fn { font-size:7.5pt; line-height:0; position:relative; }
+  sup.fn a { color:var(--accent); text-decoration:none; padding:0 1px; }
+  sup.fn a:hover, sup.fn a:focus { text-decoration:underline; }
+  .card { display:none; position:absolute; left:0; bottom:1.4em; z-index:10; width:340px; background:var(--card); color:var(--ink); border:1px solid var(--rule); box-shadow:0 2px 10px rgba(0,0,0,.15); padding:9px 11px; font-size:9pt; line-height:1.35; font-weight:normal; text-align:left; white-space:normal; }
+  sup.fn:hover .card, sup.fn:focus-within .card { display:block; }
+  .card q { display:block; font-style:italic; margin-bottom:5px; }
+  .card .src { color:var(--muted); }
+  .card a { color:var(--accent); word-break:break-all; }
+  .tier { display:inline-block; font-size:8pt; border:1px solid var(--rule); border-radius:3px; padding:0 4px; color:var(--muted); margin-left:4px; vertical-align:middle; }
+  ul.tp { margin:0 0 6px 1.2em; padding:0; }
+  ul.tp li { margin-bottom:4px; }
+  .ai { font-size:9.5pt; color:var(--muted); margin-bottom:6px; }
+  ol.sources { font-size:9.5pt; padding-left:1.6em; }
+  ol.sources li { margin-bottom:4px; }
+  ol.sources a { color:var(--accent); word-break:break-all; }
+  .summary-line { margin-top:22px; padding-top:8px; border-top:1px solid var(--rule); font-size:9pt; color:var(--muted); }
+  .gaps li { margin-bottom:3px; }
+  @media print {
+    html { background:#fff; } .page { box-shadow:none; margin:0; padding:0; max-width:none; }
+    .card { display:none !important; } sup.fn a { color:var(--ink); } h2 { page-break-after:avoid; }
+    ol.sources { page-break-inside:auto; } a[href]::after { content:""; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <h1>{{ brief.subject }}</h1>
+  <div class="meta">
+    <div><strong>Prospect brief</strong> for {{ brief.institution }}</div>
+    <div>Identity anchors: {% for k, v in brief.anchors.items() %}{{ k }} = {{ v }}{% if not loop.last %}; {% endif %}{% endfor %}</div>
+    <div>Generated {{ brief.generated_at.strftime('%B %-d, %Y %H:%M UTC') }}</div>
+  </div>
+  <div class="notice">Prepared from public sources only. No wealth-screening data used. Every factual sentence carries a numbered source; hover or click a number to see the supporting passage.</div>
+</header>
+
+{% macro sentence(s) -%}
+{{ s.text }}{% for eid in s.evidence_ids %}{% set n = fn_numbers[eid] %}{% set e = evidence_by_id[eid] %}<sup class="fn"><a href="#src-{{ n }}" id="ref-{{ n }}-{{ loop.index0 }}" aria-describedby="card-{{ n }}">{{ n }}</a><span class="card" role="tooltip"><q>{{ e.supporting_quote }}</q><span class="src">{{ e.publisher }}{% if e.published_date %} · {{ e.published_date }}{% endif %}<span class="tier">tier {{ e.source_tier }}</span><br><a href="{{ e.source_url }}" target="_blank" rel="noopener">{{ e.source_url }}</a></span></span></sup>{% endfor %}
+{%- endmacro %}
+
+{% for sec in section_meta %}
+<h2>{{ loop.index }}. {{ sec.title }}{% if sec.key == 'wealth' %} <span style="font-weight:normal;text-transform:none;letter-spacing:0;font-size:9.5pt;color:var(--muted)">(sourced facts only; no totals or estimates)</span>{% endif %}</h2>
+{% set body = sections_by_key.get(sec.key) %}
+{% if body and body.sentences %}
+<p>{% for s in body.sentences %}{{ sentence(s) }} {% endfor %}</p>
+{% else %}
+<p class="empty">No verified evidence found for this section.</p>
+{% endif %}
+{% endfor %}
+
+<h2>{{ section_meta|length + 1 }}. Suggested talking points <span style="font-weight:normal;text-transform:none;letter-spacing:0;font-size:9.5pt;color:var(--muted)">(AI suggestions, each tied to cited evidence)</span></h2>
+{% if brief.talking_points %}
+<ul class="tp">{% for t in brief.talking_points %}<li>{{ sentence(t) }}</li>{% endfor %}</ul>
+{% else %}<p class="empty">None.</p>{% endif %}
+
+<h2>{{ section_meta|length + 2 }}. Could not verify / gaps</h2>
+{% if brief.gaps %}<ul class="gaps">{% for g in brief.gaps %}<li>{{ g }}</li>{% endfor %}</ul>{% else %}<p class="empty">Nothing recorded.</p>{% endif %}
+{% if dropped %}
+<p class="ai">{{ dropped|length }} extracted claim{{ 's' if dropped|length != 1 }} failed verification and {{ 'were' if dropped|length != 1 else 'was' }} excluded. They are listed in evidence.csv with the reason.</p>
+{% endif %}
+
+<h2>{{ section_meta|length + 3 }}. Sources</h2>
+<ol class="sources">
+{% for src in sources %}
+<li id="src-{{ loop.index }}"><strong>{{ src.title or src.url }}</strong>{% if src.publisher %}, {{ src.publisher }}{% endif %}{% if src.published_date %}, published {{ src.published_date }}{% endif %}; accessed {{ src.accessed_at.strftime('%Y-%m-%d') }}; tier {{ src.tier }}. <a href="{{ src.url }}" target="_blank" rel="noopener">{{ src.url }}</a></li>
+{% endfor %}
+</ol>
+
+<div class="summary-line">{{ summary_line }}</div>
+</div>
+</body>
+</html>

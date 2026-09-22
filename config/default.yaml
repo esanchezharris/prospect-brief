@@ -1,0 +1,67 @@
+models:
+  writer: claude-sonnet-5          # extraction, planning, writing
+  checker: claude-haiku-4-5-20251001  # cheap yes/no checks (entailment, M2)
+prices_per_mtok:                   # USD, input/output, from platform.claude.com pricing
+  claude-sonnet-5: {input: 2.00, output: 10.00}
+  claude-haiku-4-5-20251001: {input: 1.00, output: 5.00}
+budgets:
+  max_searches: 30
+  max_documents: 50
+  wall_clock_seconds: 360
+  max_doc_chars: 15000             # text passed to the extractor per document
+search:
+  provider: tavily
+  results_per_query: 6
+fetch:
+  concurrency: 5
+  default_domain_rps: 1.0
+  domain_rps:
+    sec.gov: 8.0
+    efts.sec.gov: 8.0
+    projects.propublica.org: 2.0
+  timeout_seconds: 25
+  user_agent: "prospect-brief/0.1 (+{contact_email})"
+verify:
+  quote_partial_ratio_min: 92
+  max_sentence_drop_fraction: 0.10 # regenerate once if writer exceeds this
+  identity_score_min: 0.5          # M2
+  stale_role_months: 18            # M2
+blocklist:                         # never fetched, never searched (hard rule 1)
+  - linkedin.com
+  - facebook.com
+  - instagram.com
+  - x.com
+  - twitter.com
+  - tiktok.com
+  - spokeo.com
+  - whitepages.com
+  - beenverified.com
+  - truepeoplesearch.com
+  - fastpeoplesearch.com
+  - peoplefinders.com
+  - intelius.com
+  - radaris.com
+  - mylife.com
+  - zabasearch.com
+  - peekyou.com
+  - celebritynetworth.com
+  - networthpost.com
+  - wealthygorilla.com
+  - therichest.com
+  - wealthx.com
+  - windfalldata.com
+  - donorsearch.net
+  - iwave.com
+  - blocked.example            # fixture domain used by tests
+tiers:                             # M2; 1 = primary/official, 2 = established news, 3 = everything else
+  tier1_suffixes: [sec.gov, propublica.org, irs.gov, usc.edu]
+  tier2_domains: [nytimes.com, wsj.com, washingtonpost.com, reuters.com, apnews.com, bloomberg.com, ft.com, latimes.com, forbes.com, philanthropy.com, chronicle.com, insidephilanthropy.com, cnbc.com, bbc.com, theguardian.com, npr.org, axios.com, fortune.com, businessinsider.com, politico.com]
+brief_sections:
+  - {key: summary, title: Summary}
+  - {key: background, title: Background and education}
+  - {key: career, title: Career and business affiliations}
+  - {key: wealth, title: Wealth indicators}
+  - {key: philanthropy, title: Philanthropy}
+  - {key: institution, title: Connections to the institution}
+  - {key: interests, title: Interests and causes}
+  - {key: news, title: Recent news}

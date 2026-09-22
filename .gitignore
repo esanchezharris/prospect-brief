@@ -1,0 +1,15 @@
+.env
+runs/
+cache/
+briefs/
+signals/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+*.egg-info/
+
+# local key scratch files
+Tavily key.rtf
+*.rtf
