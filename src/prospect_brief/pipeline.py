@@ -30,7 +30,7 @@ from .sources.institution import collect_institution_urls
 from .sources.propublica import collect_propublica
 from .textnorm import normalize
 from .trust import apply_identity, check_entailment, corroborate_and_conflict, mark_stale, source_tier
-from .verify import is_out_of_scope, is_wealth_estimate, looks_like_instruction, quote_in_source, specifics_in_quote
+from .verify import is_out_of_scope, is_wealth_estimate, looks_like_instruction, quote_in_source, quote_references_subject, specifics_in_quote
 from .write import write_brief
 
 
@@ -61,9 +61,9 @@ def subject_name_variants(subject: str) -> list[str]:
     return out
 
 
-def verify_evidence(items: list[Evidence], docs_by_key: dict[str, Document], config: Config, subject: str = "") -> None:
+def verify_evidence(items: list[Evidence], docs_by_key: dict[str, Document], config: Config, subject: str = "", name_variants: list[str] | None = None) -> None:
     thr = int(config.get("verify", "quote_partial_ratio_min", default=92))
-    exempt = subject_name_variants(subject) if subject else []
+    exempt = (subject_name_variants(subject) + list(name_variants or [])) if subject else []
     for e in items:
         w = is_wealth_estimate(e.claim, e.supporting_quote)
         if not w.passed:
@@ -89,6 +89,11 @@ def verify_evidence(items: list[Evidence], docs_by_key: dict[str, Document], con
         if not b.passed:
             e.status, e.drop_reason = "dropped", b.reason
             continue
+        if subject and not e.claim_type.startswith("foundation") and e.publisher not in ("sec.gov", "projects.propublica.org"):
+            r = quote_references_subject(e.supporting_quote, subject, exempt)
+            if not r.passed:
+                e.status, e.drop_reason = "dropped", r.reason
+                continue
         e.status = "verified"
 
 
@@ -225,7 +230,7 @@ async def run_brief(
 
     # 5. verify: (a) quote in source, (b) specifics in quote — code only
     docs_by_key = {d.cache_key: d for d in docs}
-    verify_evidence(evidence, docs_by_key, config, subject)
+    verify_evidence(evidence, docs_by_key, config, subject, card.name_variants)
     report.counts["passed_checks_ab"] = sum(1 for e in evidence if e.status == "verified")
     # (d) identity: exclude documents without a confirmed anchor
     excluded_docs = apply_identity(evidence, docs_by_key, id_anchors, config, preverified)

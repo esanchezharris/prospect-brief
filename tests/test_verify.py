@@ -1,6 +1,6 @@
 import random
 
-from prospect_brief.verify import extract_specifics, is_out_of_scope, is_wealth_estimate, quote_in_source, specifics_in_quote
+from prospect_brief.verify import extract_specifics, is_out_of_scope, is_wealth_estimate, quote_in_source, quote_references_subject, specifics_in_quote
 
 SOURCE = """
 Dorian Vexley-Marsh, founder of Halcyon Reef Capital, announced a $12 million gift to the
@@ -115,3 +115,11 @@ def test_out_of_scope_guard_is_narrow():
     assert is_out_of_scope("She donated $50 million to the cancer research center at UCLA.").passed
     assert is_out_of_scope("He serves on the board of Children's Hospital Los Angeles.").passed
     assert is_out_of_scope("She funded a health clinic in Watts.").passed
+
+
+def test_quote_must_reference_the_subject():
+    assert not quote_references_subject("gave $20 million to Morehouse College", "MacKenzie Scott").passed
+    assert quote_references_subject("Scott gave $20 million to Morehouse College", "MacKenzie Scott").passed
+    assert quote_references_subject("She gave $20 million to Morehouse College", "MacKenzie Scott").passed
+    assert quote_references_subject("Ms. Bezos gave $20 million to Morehouse", "MacKenzie Scott", ["MacKenzie Bezos"]).passed
+    assert quote_references_subject("Her foundation paid grants of $2.7 million", "Dorian Vexley-Marsh").passed

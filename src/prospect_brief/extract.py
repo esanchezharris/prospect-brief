@@ -16,7 +16,9 @@ Output rules:
 - One fact per claim, written as a complete short sentence naming the person.
 - supporting_quote must be copied VERBATIM from the document, contiguous, at most 300
   characters, and must itself contain every number, amount, date and proper noun that the claim uses
-  (the subject's own name is the one exception: the quote may say "he" or "she"). Any other name in
+  (the subject's own name may appear as "he", "she" or "her" instead, but the quote MUST contain
+  some reference to the subject: a bare fragment like "gave $20 million to Morehouse College" is
+  rejected; widen the quote to the sentence that names or refers to the person). Any other name in
   the claim, such as a company, school, foundation or city, must appear in the quote. Do not
   paraphrase inside the quote. If no such passage exists, do not make the claim.
 - Only facts about the subject person. If the document is about a different person with the same

@@ -104,11 +104,14 @@ def source_tier(url: str, config: Config, *, institution: str = "", subject_orgs
 
 # --- (c) entailment -------------------------------------------------------------------------
 
-ENTAIL_SYSTEM = f"""You judge whether a quoted passage supports a claim. {UNTRUSTED_INPUT_NOTICE}
+ENTAIL_SYSTEM = f"""You judge whether a quoted passage, ON ITS OWN, supports a claim. {UNTRUSTED_INPUT_NOTICE}
 For each item answer exactly one of: supports (the quote states the claim, including every
-number, date and name in it), partially (the quote is related but does not state the whole
-claim, or hedges it), no (the quote does not support the claim or contradicts it). Be strict:
-a claim that adds a detail the quote does not contain is 'partially', not 'supports'."""
+number, date and name in it, and the quote itself identifies who the claim is about, by name,
+pronoun or honorific), partially (the quote is related but does not state the whole claim, hedges
+it, or leaves out who did it), no (the quote does not support the claim or contradicts it).
+Be strict: a claim that adds a detail, a timing ("after graduating", "at the time of the divorce"),
+a role ("her primary vehicle") or an attribution ("Scott's foundation awarded") that the quote does
+not contain is 'partially', not 'supports'. "Next book" does not establish "second novel"."""
 
 
 def check_entailment(llm: LLMProvider, evidence: list[Evidence], *, batch: int = 20) -> None:

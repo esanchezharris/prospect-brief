@@ -180,6 +180,24 @@ def is_wealth_estimate(claim: str, quote: str = "") -> CheckResult:
     return CheckResult(True)
 
 
+_PRONOUN_RE = re.compile(r"\b(he|she|they|him|her|his|hers|their|theirs|himself|herself|themselves|mr|mrs|ms|dr)\b\.?", re.I)
+
+
+def quote_references_subject(quote: str, subject: str, extra_names: list[str] | None = None) -> CheckResult:
+    """A quote that never refers to the subject (by name, a name variant, a pronoun or an honorific)
+    cannot support a claim about them on its own: 'gave $20 million to Morehouse College' could be
+    anyone. Such fragments are dropped; the extractor is told to widen the quote instead."""
+    q = normalize(quote)
+    names = [subject] + list(extra_names or [])
+    for n in names:
+        for part in normalize(n).split():
+            if len(part) > 2 and re.search(rf"\b{re.escape(part)}\b", q):
+                return CheckResult(True)
+    if _PRONOUN_RE.search(unify(quote)):
+        return CheckResult(True)
+    return CheckResult(False, "quote_names_no_subject")
+
+
 def specifics_in_quote(claim: str, quote: str, exempt_names: list[str] | None = None) -> CheckResult:
     """Check (b). Every specific in the claim must be present in the quote.
 
