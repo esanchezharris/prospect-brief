@@ -45,3 +45,13 @@ def test_stale_current_roles_get_as_of():
     past = _ev("r3", "Dorian Vexley-Marsh served as COO of Pelagic Systems from 1998 to 2003.", "https://x.example/3", section="career", ctype="role", date_="2020-01-01")
     n = mark_stale([old, fresh, past], cfg, today=date(2026, 9, 21))
     assert n == 1 and old.claim.startswith("As of 2023-01-15, Dorian") and fresh.claim.startswith("Dorian") and past.claim.startswith("Dorian")
+
+
+def test_amounts_never_conflict_with_dates_or_other_periods():
+    est = _ev("f1", "The Vexley-Marsh Family Foundation was established in 2016 by Dorian.", "https://a.example/1", ctype="foundation")
+    a24 = _ev("f2", "Vexley-Marsh Family Foundation reported total assets of $48,300,000 for tax year 2024.", "https://b.example/2", ctype="foundation")
+    a23 = _ev("f3", "Vexley-Marsh Family Foundation reported total assets of $45,100,000 for tax year 2023.", "https://c.example/3", ctype="foundation")
+    a24b = _ev("f4", "Vexley-Marsh Family Foundation had total assets of $50,000,000 at year end 2024.", "https://d.example/4", ctype="foundation")
+    corroborate_and_conflict([est, a24, a23, a24b], "Dorian Vexley-Marsh")
+    assert not est.conflicts_with and not a23.conflicts_with  # different kinds / different periods
+    assert a24b.id in a24.conflicts_with  # same period, different amount

@@ -1,0 +1,23 @@
+{
+ "total_results": 2,
+ "organizations": [
+  {
+   "ein": 871234567,
+   "strein": "87-1234567",
+   "name": "Vexley-Marsh Family Foundation",
+   "city": "LONG BEACH",
+   "state": "CA",
+   "ntee_code": "T20",
+   "have_filings": true
+  },
+  {
+   "ein": 871234568,
+   "strein": "87-1234568",
+   "name": "Marsh Family Foundation",
+   "city": "TULSA",
+   "state": "OK",
+   "ntee_code": "T20",
+   "have_filings": true
+  }
+ ]
+}

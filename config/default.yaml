@@ -56,6 +56,9 @@ blocklist:                         # never fetched, never searched (hard rule 1)
 tiers:                             # M2; 1 = primary/official, 2 = established news, 3 = everything else
   tier1_suffixes: [sec.gov, propublica.org, irs.gov, usc.edu, fixture.example]   # fixture.example stands in for the institution in tests
   tier2_domains: [nytimes.com, wsj.com, washingtonpost.com, reuters.com, apnews.com, bloomberg.com, ft.com, latimes.com, forbes.com, philanthropy.com, chronicle.com, insidephilanthropy.com, cnbc.com, bbc.com, theguardian.com, npr.org, axios.com, fortune.com, businessinsider.com, politico.com, coastalbusinessjournal.example]
+institution_domains:               # M3: the institution's own site, searched with include_domains
+  "University of Southern California": usc.edu
+  "Fixture University": fixture.example   # tests
 brief_sections:
   - {key: summary, title: Summary}
   - {key: background, title: Background and education}

@@ -1,0 +1,30 @@
+{
+ "hits": {
+  "total": {
+   "value": 3
+  },
+  "hits": [
+   {
+    "_id": "9100001",
+    "_source": {
+     "entity": "VEXLEY-MARSH DORIAN",
+     "entity_words": "VEXLEY-MARSH DORIAN"
+    }
+   },
+   {
+    "_id": "9100002",
+    "_source": {
+     "entity": "PELAGIC SYSTEMS, INC.",
+     "entity_words": "PELAGIC SYSTEMS INC"
+    }
+   },
+   {
+    "_id": "9100003",
+    "_source": {
+     "entity": "VEXLEY-MARSH DORIAN R",
+     "entity_words": "VEXLEY-MARSH DORIAN R"
+    }
+   }
+  ]
+ }
+}

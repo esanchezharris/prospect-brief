@@ -15,7 +15,7 @@ from .models import SearchResult
 class SearchProvider(Protocol):
     name: str
 
-    async def search(self, query: str, *, max_results: int = 6, topic: str = "general") -> list[SearchResult]: ...
+    async def search(self, query: str, *, max_results: int = 6, topic: str = "general", include_domains: list[str] | None = None) -> list[SearchResult]: ...
 
     async def aclose(self) -> None: ...
 
@@ -33,14 +33,17 @@ class TavilyProvider:
         self.client = httpx.AsyncClient(timeout=30, headers={"Authorization": f"Bearer {self.api_key}", "User-Agent": user_agent})
         self.credits_used = 0
 
-    async def search(self, query: str, *, max_results: int = 6, topic: str = "general") -> list[SearchResult]:
+    async def search(self, query: str, *, max_results: int = 6, topic: str = "general", include_domains: list[str] | None = None) -> list[SearchResult]:
         body = {
             "query": query,
             "search_depth": "basic",
             "max_results": max_results,
             "topic": topic,
-            "exclude_domains": self.exclude_domains,
         }
+        if include_domains:
+            body["include_domains"] = include_domains
+        else:
+            body["exclude_domains"] = self.exclude_domains
         r = await self.client.post(self.URL, json=body)
         r.raise_for_status()
         data = r.json()
@@ -72,11 +75,13 @@ class MockSearchProvider:
 
         return cls(json.loads((corpus_dir / "manifest.json").read_text()))
 
-    async def search(self, query: str, *, max_results: int = 6, topic: str = "general") -> list[SearchResult]:
+    async def search(self, query: str, *, max_results: int = 6, topic: str = "general", include_domains: list[str] | None = None) -> list[SearchResult]:
         self.queries.append(query)
         q = query.lower()
         scored = []
         for entry in self.manifest:
+            if include_domains and not any(d in entry["url"] for d in include_domains):
+                continue
             score = sum(1 for kw in entry.get("keywords", []) if kw.lower() in q)
             if score:
                 scored.append((score, entry))

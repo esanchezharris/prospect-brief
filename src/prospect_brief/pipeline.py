@@ -24,6 +24,9 @@ class IdentityUnresolved(Exception):
 from .plan import make_plan
 from .render import write_outputs
 from .search import SearchProvider
+from .sources.edgar import collect_def14a, collect_edgar
+from .sources.institution import collect_institution_urls
+from .sources.propublica import collect_propublica
 from .textnorm import normalize
 from .trust import apply_identity, check_entailment, corroborate_and_conflict, mark_stale, source_tier
 from .verify import looks_like_instruction, quote_in_source, specifics_in_quote
@@ -132,14 +135,16 @@ async def run_brief(
         for r in results:
             if r.url not in urls and not is_blocked(r.url, config.blocklist):
                 urls[r.url] = q.section
+    # 2b. the institution's own domain (M3)
+    inst_results, inst_domain = await collect_institution_urls(search, config, subject, institution)
+    for r in inst_results:
+        urls.setdefault(r.url, "institution")
+    report.counts["institution_domain_urls"] = len(inst_results)
     report.counts["urls_found"] = len(urls)
-    log(f"[search] {report.searches_run} searches, {len(urls)} unique urls")
+    log(f"[search] {report.searches_run} searches, {len(urls)} unique urls ({len(inst_results)} from {inst_domain or 'no institution domain configured'})")
 
     # 3. fetch
-    try:
-        docs = await fetcher.fetch_many(list(urls)[:max_docs])
-    finally:
-        await fetcher.aclose()
+    docs = await fetcher.fetch_many(list(urls)[:max_docs])
     report.counts.update({f"fetch_{k}": v for k, v in fetcher.stats.items()})
     good = [d for d in docs if d.ok]
     on_subject = [d for d in good if mentions_subject(d.text, subject)]
@@ -147,8 +152,25 @@ async def run_brief(
     report.counts["documents_mentioning_subject"] = len(on_subject)
     log(f"[fetch] {len(good)} readable, {len(on_subject)} mention the subject")
 
+    # 3b. structured sources (M3): SEC EDGAR insider filings + proxy statements, ProPublica foundations
+    preverified: dict[str, str] = {}
+    card_orgs = [f.fact for f in card.anchor_facts]
+    try:
+        edgar_docs, edgar_ev, edgar_notes, targets = await collect_edgar(fetcher, subject=subject, anchors=id_anchors, card_orgs=card_orgs, log=log)
+        proxy_docs, proxy_notes = await collect_def14a(fetcher, targets=targets, subject=subject, log=log) if targets else ([], [])
+        report.notes.extend(edgar_notes + proxy_notes)
+    except Exception as e:
+        edgar_docs, edgar_ev, proxy_docs = [], [], []
+        report.notes.append(f"SEC EDGAR collection error: {type(e).__name__}: {e}")
+    for d in edgar_docs:
+        preverified[d.cache_key] = "sec_reporting_owner_record_for_anchored_issuer"
+    docs.extend(edgar_docs + proxy_docs)
+    on_subject.extend(d for d in proxy_docs if mentions_subject(d.text, subject))
+    report.counts["sec_insider_filings"] = len(edgar_docs)
+    report.counts["sec_proxy_statements"] = len(proxy_docs)
+
     # 4. extract (sequential, bounded by wall clock)
-    evidence: list[Evidence] = []
+    evidence: list[Evidence] = list(edgar_ev)
     for i, d in enumerate(on_subject, 1):
         if time_left() < 45:
             report.notes.append(f"extraction stopped after {i - 1} documents: wall clock budget")
@@ -157,6 +179,19 @@ async def run_brief(
             evidence.extend(extract_evidence(llm, config, d, subject, anchors, institution, id_prefix=f"e{i}-"))
         except Exception as e:
             report.notes.append(f"extract error on {d.final_url}: {type(e).__name__}: {e}")
+    # 4b. ProPublica foundations, matched by name against the identity card and the claims seen so far
+    try:
+        mentioned = [f.fact for f in card.anchor_facts] + [e.claim for e in evidence]
+        pp_docs, pp_ev, pp_notes = await collect_propublica(fetcher, subject=subject, spouse=card.spouse, card_facts=[f.fact for f in card.anchor_facts], mentioned=mentioned, log=log)
+        report.notes.extend(pp_notes)
+    except Exception as e:
+        pp_docs, pp_ev = [], []
+        report.notes.append(f"ProPublica collection error: {type(e).__name__}: {e}")
+    for d in pp_docs:
+        preverified[d.cache_key] = "foundation_name_matches_subject"
+    docs.extend(pp_docs)
+    evidence.extend(pp_ev)
+    report.counts["propublica_foundations"] = len(pp_docs)
     report.counts["claims_extracted"] = len(evidence)
     log(f"[extract] {len(evidence)} claims")
 
@@ -165,7 +200,7 @@ async def run_brief(
     verify_evidence(evidence, docs_by_key, config, subject)
     report.counts["passed_checks_ab"] = sum(1 for e in evidence if e.status == "verified")
     # (d) identity: exclude documents without a confirmed anchor
-    excluded_docs = apply_identity(evidence, docs_by_key, id_anchors, config)
+    excluded_docs = apply_identity(evidence, docs_by_key, id_anchors, config, preverified)
     report.counts["documents_possibly_different_person"] = len(excluded_docs)
     # (c) entailment: cheap model check, only "supports" passes
     check_entailment(llm, evidence)
@@ -209,6 +244,7 @@ async def run_brief(
         gaps.append(note)
 
     # 7. report + render
+    await fetcher.aclose()
     report.usage = llm.usage()
     report.cost_usd = round(sum(u.cost_usd for u in report.usage), 4)
     report.finished_at = datetime.now(timezone.utc)

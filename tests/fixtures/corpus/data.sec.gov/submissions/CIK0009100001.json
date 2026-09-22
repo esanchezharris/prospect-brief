@@ -1,0 +1,25 @@
+{
+ "cik": "9100001",
+ "name": "VEXLEY-MARSH DORIAN",
+ "entityType": "other",
+ "filings": {
+  "recent": {
+   "accessionNumber": [
+    "0000910000-26-000001",
+    "0000910000-25-000009"
+   ],
+   "filingDate": [
+    "2026-08-18",
+    "2025-03-02"
+   ],
+   "form": [
+    "4",
+    "3"
+   ],
+   "primaryDocument": [
+    "xslF345X06/form4.xml",
+    "xslF345X05/form3.xml"
+   ]
+  }
+ }
+}

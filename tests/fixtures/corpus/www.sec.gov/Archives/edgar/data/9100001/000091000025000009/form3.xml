@@ -1,0 +1,5 @@
+<?xml version="1.0"?><ownershipDocument><documentType>3</documentType><periodOfReport>2025-03-01</periodOfReport>
+<issuer><issuerCik>0009100002</issuerCik><issuerName>Pelagic Systems, Inc.</issuerName><issuerTradingSymbol>PLGS</issuerTradingSymbol></issuer>
+<reportingOwner><reportingOwnerId><rptOwnerCik>0009100001</rptOwnerCik><rptOwnerName>VEXLEY-MARSH DORIAN</rptOwnerName></reportingOwnerId>
+<reportingOwnerRelationship><isDirector>1</isDirector></reportingOwnerRelationship></reportingOwner>
+<nonDerivativeTable><nonDerivativeHolding><securityTitle><value>Common Stock</value></securityTitle><postTransactionAmounts><sharesOwnedFollowingTransaction><value>1250000</value></sharesOwnedFollowingTransaction></postTransactionAmounts></nonDerivativeHolding></nonDerivativeTable></ownershipDocument>

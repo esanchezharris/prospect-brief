@@ -1,0 +1,28 @@
+{
+ "cik": "9100002",
+ "name": "PELAGIC SYSTEMS, INC.",
+ "tickers": [
+  "PLGS"
+ ],
+ "entityType": "operating",
+ "filings": {
+  "recent": {
+   "accessionNumber": [
+    "0000910000-26-000044",
+    "0000910000-26-000031"
+   ],
+   "filingDate": [
+    "2026-04-20",
+    "2026-02-10"
+   ],
+   "form": [
+    "DEF 14A",
+    "10-K"
+   ],
+   "primaryDocument": [
+    "pelagic-def14a.htm",
+    "pelagic-10k.htm"
+   ]
+  }
+ }
+}

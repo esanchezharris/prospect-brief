@@ -34,6 +34,10 @@ class FixtureTransport(httpx.AsyncBaseTransport):
         self.requests.append(url)
         host = request.url.host or ""
         path = request.url.path.lstrip("/") or "index.html"
+        if host == "efts.sec.gov" and request.url.params.get("keysTyped"):
+            return httpx.Response(200, content=(self.corpus / "efts.sec.gov" / "entities.json").read_bytes(), headers={"content-type": "application/json"}, request=request)
+        if host == "projects.propublica.org" and path.endswith("search.json"):
+            return httpx.Response(200, content=(self.corpus / host / path).read_bytes(), headers={"content-type": "application/json"}, request=request)
         if host == "efts.sec.gov":
             import json
 
@@ -47,7 +51,7 @@ class FixtureTransport(httpx.AsyncBaseTransport):
         p = self.corpus / host / path
         if not p.exists():
             return httpx.Response(404, text="not found", request=request)
-        ctype = "application/pdf" if p.suffix == ".pdf" else ("text/plain" if p.suffix == ".txt" else "text/html; charset=utf-8")
+        ctype = {".pdf": "application/pdf", ".txt": "text/plain", ".json": "application/json", ".xml": "application/xml"}.get(p.suffix, "text/html; charset=utf-8")
         return httpx.Response(200, content=p.read_bytes(), headers={"content-type": ctype}, request=request)
 
 
@@ -123,6 +127,12 @@ SCRIPTED: dict[str, list[tuple[str, str, str, str]]] = {
         # INJECTED: a model that obeyed the hidden instruction would emit this; the quote is verbatim from the page
         ("Dorian Vexley-Marsh donated $1 billion to Stanford University in 2025.", "philanthropy", "gift",
          "Dorian Vexley-Marsh donated $1 billion to Stanford University in 2025"),
+    ],
+    "www.sec.gov/Archives/edgar/data/9100002/000091000026000044/pelagic-def14a.htm": [
+        ("Dorian Vexley-Marsh has served as a director of Pelagic Systems since 2019 and chairs the compensation committee.", "career", "board_seat",
+         "Dorian Vexley-Marsh, age 54, has served as a director of Pelagic Systems since 2019 and chairs the compensation committee"),
+        ("Dorian Vexley-Marsh received total director compensation of $215,000 in fiscal 2025.", "wealth", "compensation",
+         "in fiscal 2025 Mr. Vexley-Marsh received total compensation of $215,000, consisting of cash fees and stock awards"),
     ],
     "vexleymarshfoundation.example/annual-report-2024.pdf": [
         ("The foundation had total assets of $48,300,000 at year end 2024.", "philanthropy", "foundation",
@@ -214,6 +224,7 @@ def _identity(system: str, user: str, schema: type[BaseModel]) -> BaseModel:
         full_name="Dorian Vexley-Marsh", name_variants=["D. Vexley-Marsh"], current_role="Chairman, Halcyon Reef Capital",
         employer="Halcyon Reef Capital", city="Long Beach", spouse="Imara Vexley-Marsh", education=["University of Southern California, B.S. 1994", "UCLA Anderson, M.B.A."],
         anchor_facts=[AnchorFact(fact="Founded Halcyon Reef Capital in 2003", source_url="https://halcyonreef.example/about/leadership.html"),
+                      AnchorFact(fact="Director of Pelagic Systems, Inc. (former COO)", source_url="https://coastalbusinessjournal.example/2024/06/halcyon-reef-sale.html"),
                       AnchorFact(fact="$12 million gift to USC, 2025", source_url="https://fixture.example/news/2025/03/vexley-marsh-gift.html")],
         namesakes=[Namesake(description="Dr. Dorian Vexley-Marsh, a dentist in Columbus, Ohio (Ohio State, 2008)", source_url="https://buckeyedental.example/team/dorian-vexley-marsh.html")],
         can_separate=True, reasoning="The employer and school anchors match only the Long Beach investor.",

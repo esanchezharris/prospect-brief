@@ -1,0 +1,34 @@
+{
+ "organization": {
+  "ein": 871234567,
+  "strein": "87-1234567",
+  "name": "Vexley-Marsh Family Foundation",
+  "city": "LONG BEACH",
+  "state": "CA",
+  "ntee_code": "T20",
+  "subseccd": 3
+ },
+ "filings_with_data": [
+  {
+   "tax_prd_yr": 2024,
+   "tax_prd": "202412",
+   "formtype": 2,
+   "totassetsend": 48300000,
+   "grscontrgifts": 3000000,
+   "contrpdpbks": 2750000,
+   "totfuncexpns": 2900000,
+   "pdf_url": "https://projects.propublica.org/nonprofits/download-filing?path=IRS%2F871234567_202412_990PF.pdf"
+  },
+  {
+   "tax_prd_yr": 2023,
+   "tax_prd": "202312",
+   "formtype": 2,
+   "totassetsend": 45100000,
+   "grscontrgifts": 2500000,
+   "contrpdpbks": 2100000,
+   "totfuncexpns": 2250000,
+   "pdf_url": null
+  }
+ ],
+ "filings_without_data": []
+}

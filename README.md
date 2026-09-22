@@ -51,7 +51,7 @@ uv run pytest -q
 
 ### Grounding
 
-The writer never sees a web page. It only sees a table of short claims that have already passed
+The writer never sees a web page or a filing. It only sees a table of short claims that have already passed
 the code checks below, each with an id, and it must attach those ids to every sentence it writes.
 The tool also refuses to compute anything: it reports "sold X for $Y" as stated by a source and
 never estimates net worth, totals, or giving capacity.
@@ -102,6 +102,22 @@ anchors cannot separate the person from a namesake, it stops and asks for anothe
 of guessing. A prospect researcher is expected to click footnotes and check them, and the
 signal watch stops at a list of names with a ready-to-copy command for each person: it does not
 match names against Salesforce or any CRM, and this repository has no CRM access of any kind.
+
+## Sources
+
+- Web and news via the search provider (Tavily by default; the provider is one file, `search.py`).
+- The institution's own domain (configured in `config/default.yaml` under `institution_domains`).
+- SEC EDGAR: when the subject has an EDGAR reporting-owner record whose filings are for a company
+  named in the confirmed anchors, Forms 3 and 4 (holdings and transactions) are rendered into plain
+  sentences and cited line by line, and the issuer's latest DEF 14A proxy statement goes through the
+  normal extraction and verification path.
+- ProPublica Nonprofit Explorer (IRS Form 990 and 990-PF data) for foundations that carry the
+  subject's name. A foundation is used only if its name contains the subject's surname as a whole
+  word plus the given name, the spouse's name (when the spouse appears in joint public
+  philanthropy), or the foundation is named in other collected evidence; look-alike names are
+  listed in the run notes and never used. **Attribution:** nonprofit financial data is from IRS
+  filings via [ProPublica Nonprofit Explorer](https://projects.propublica.org/nonprofits/), used
+  under its noncommercial terms with attribution; the brief says so in its sources section.
 
 ## Data handling
 

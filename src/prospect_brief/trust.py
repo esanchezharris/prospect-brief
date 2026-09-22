@@ -45,12 +45,19 @@ def identity_score(doc: Document, anchors: dict[str, str]) -> tuple[float, list[
     return (hit / total if total else 0.0), reasons
 
 
-def apply_identity(evidence: list[Evidence], docs_by_key: dict[str, Document], anchors: dict[str, str], config: Config) -> list[Document]:
-    """Exclude documents without a confirmed anchor. Returns the excluded documents."""
+def apply_identity(evidence: list[Evidence], docs_by_key: dict[str, Document], anchors: dict[str, str], config: Config, preverified: dict[str, str] | None = None) -> list[Document]:
+    """Exclude documents without a confirmed anchor. Returns the excluded documents.
+    preverified maps cache_key -> reason for structured records whose collector already tied the record
+    to the subject (an insider filing under the subject's own EDGAR record for an anchored issuer, a
+    foundation matched by full name)."""
     min_score = float(config.get("verify", "identity_score_min", default=0.25))
+    preverified = preverified or {}
     excluded: list[Document] = []
     scores: dict[str, tuple[float, list[str]]] = {}
     for e in evidence:
+        if e.cache_key in preverified:
+            e.identity_score, e.identity_reasons = 1.0, [preverified[e.cache_key]]
+            continue
         if e.cache_key not in scores:
             doc = docs_by_key.get(e.cache_key)
             scores[e.cache_key] = identity_score(doc, anchors) if doc else (0.0, [])
@@ -132,9 +139,33 @@ def _topic(claim: str) -> str:
     return normalize(t)
 
 
+_FORM_CODE_RE = re.compile(r"\b\d[\d,]*(?=-[A-Za-z])")  # 990-PF, 10-K, 8-K: form codes, not figures
+
+
 def _figures(claim: str) -> set[str]:
+    money, when = _split_figures(claim)
+    return money | when
+
+
+def _split_figures(claim: str) -> tuple[set[str], set[str]]:
+    """(money amounts, dates and other numbers), normalized, with form codes like 990-PF removed."""
     s = extract_specifics(claim)
-    return {normalize(x).replace(",", "") for x in s["money"] + s["dates"] + s["numbers"]}
+    codes = set(_FORM_CODE_RE.findall(claim))
+    norm = lambda x: normalize(x).replace(",", "").replace(" ", "")
+    money = {norm(x) for x in s["money"]}
+    when = {norm(x) for x in s["dates"] + s["numbers"] if x not in codes}
+    return money, when
+
+
+def _is_conflict(a_claim: str, b_claim: str) -> bool:
+    """Same kind of figure, different value, same period. An amount never conflicts with a date."""
+    ma, wa = _split_figures(a_claim)
+    mb, wb = _split_figures(b_claim)
+    if ma and mb:
+        return ma != mb and (not wa or not wb or wa == wb)
+    if not ma and not mb:
+        return bool(wa and wb) and wa != wb
+    return False
 
 
 def _entities(claim: str, subject_names: set[str]) -> set[str]:
@@ -147,7 +178,7 @@ def _entities(claim: str, subject_names: set[str]) -> set[str]:
     return out
 
 
-def corroborate_and_conflict(evidence: list[Evidence], subject: str = "", *, same_fact: int = 85, related: int = 50) -> None:
+def corroborate_and_conflict(evidence: list[Evidence], subject: str = "", *, same_fact: int = 85, same_figures: int = 60, related: int = 50) -> None:
     """Corroborated: the same fact (same figures, near-identical wording) from two independent domains.
     Conflict: same section and claim type from two independent domains, about the same named entity,
     with different figures (amounts or dates). Conflicts are surfaced, never resolved."""
@@ -160,10 +191,11 @@ def corroborate_and_conflict(evidence: list[Evidence], subject: str = "", *, sam
                 continue
             sim = fuzz.token_set_ratio(ta, _topic(b.claim))
             fb = _figures(b.claim)
-            if fa == fb and sim >= same_fact:
+            if fa == fb and (sim >= same_fact or (fa and sim >= same_figures)):
+                # identical figures from independent domains with related wording, or near-identical wording
                 a.corroborated_by.append(b.id)
                 b.corroborated_by.append(a.id)
-            elif fa and fb and fa != fb and a.claim_type == b.claim_type and sim >= related and (ea & _entities(b.claim, names)):
+            elif a.claim_type == b.claim_type and sim >= related and (ea & _entities(b.claim, names)) and _is_conflict(a.claim, b.claim):
                 a.conflicts_with.append(b.id)
                 b.conflicts_with.append(a.id)
 

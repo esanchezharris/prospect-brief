@@ -98,6 +98,9 @@
 <li id="src-{{ loop.index }}"><strong>{{ src.title or src.url }}</strong>{% if src.publisher %}, {{ src.publisher }}{% endif %}{% if src.published_date %}, published {{ src.published_date }}{% endif %}; accessed {{ src.accessed_at.strftime('%Y-%m-%d') }}; tier {{ src.tier }}. <a href="{{ src.url }}" target="_blank" rel="noopener">{{ src.url }}</a></li>
 {% endfor %}
 </ol>
+{% if sources|selectattr('publisher', 'equalto', 'projects.propublica.org')|list %}
+<p class="ai">Nonprofit financial data is from IRS filings via <a href="https://projects.propublica.org/nonprofits/" target="_blank" rel="noopener">ProPublica Nonprofit Explorer</a>, used under its noncommercial terms with attribution.</p>
+{% endif %}
 
 <div class="summary-line">{{ summary_line }}</div>
 </div>

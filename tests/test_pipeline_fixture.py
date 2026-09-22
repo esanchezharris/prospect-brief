@@ -9,14 +9,27 @@ from lxml import html as lxml_html
 from prospect_brief.pipeline import run_brief
 from prospect_brief.testing import INJECTION_MARKER, build_fake_llm, fixture_transport, mock_search
 
+pytestmark = pytest.mark.asyncio
+
 SUBJECT = "Dorian Vexley-Marsh"
 ANCHORS = {"employer": "Halcyon Reef Capital", "school": "University of Southern California", "city": "Long Beach"}
 
 
-@pytest.fixture
-async def result(config, tmp_path):
-    run_dir = tmp_path / "runs" / "test-run"
+@pytest.fixture(scope="module")
+def result(tmp_path_factory):
+    """One pipeline run shared by every test in this module."""
+    import asyncio
+
+    from tests.conftest import make_config
+
+    root = tmp_path_factory.mktemp("pipeline")
+    config = make_config(root)
+    run_dir = root / "runs" / "test-run"
     run_dir.mkdir(parents=True)
+    return asyncio.run(_run(config, run_dir))
+
+
+async def _run(config, run_dir):
     llm = build_fake_llm(run_dir)
     transport = fixture_transport()
     brief, html_path = await run_brief(
@@ -155,3 +168,40 @@ async def test_tiers_and_identity_card(result):
     assert by_url["https://oceantechweekly.example/2025/interview-vexley-marsh.html"] == 3
     assert 'class="t3"' in html_path.read_text()
     assert brief.identity and brief.identity.can_separate and brief.report.counts["identity_anchors"] >= 3
+
+
+async def test_sec_insider_filings_become_sourced_claims(result):
+    brief, html_path, llm, transport, _ = result
+    sec = [e for e in brief.evidence if e.publisher == "sec.gov" and e.status == "verified" and "form" in e.source_url.rsplit("/", 1)[-1]]
+    assert any("open-market sale of 50,000 shares" in e.claim and "$18.25" in e.claim for e in sec)
+    assert any("1,200,000 shares" in e.claim for e in sec)
+    assert any("director" in e.claim and "Form 4" in e.claim for e in sec)
+    assert all(e.source_tier == 1 and e.identity_reasons == ["sec_reporting_owner_record_for_anchored_issuer"] for e in sec)
+    # the proxy statement went through the normal extractor and verification
+    proxy = [e for e in brief.evidence if "pelagic-def14a" in e.source_url]
+    assert proxy and any("$215,000" in e.claim and e.status == "verified" for e in proxy)
+    assert brief.report.counts["sec_insider_filings"] == 2 and brief.report.counts["sec_proxy_statements"] == 1
+    # namesake EDGAR entity (VEXLEY-MARSH DORIAN R) has no filings and contributes nothing
+    assert not any("9100003" in u for u in transport.requests if "Archives" in u)
+
+
+async def test_propublica_foundation_figures_and_attribution(result):
+    brief, html_path, *_ = result
+    pp = [e for e in brief.evidence if e.publisher == "projects.propublica.org" and e.status == "verified"]
+    assert any("total assets at year end of $48,300,000 for tax year 2024" in e.claim for e in pp)
+    assert any("contributions and grants paid of $2,750,000 for tax year 2024" in e.claim for e in pp)
+    assert all(e.source_tier == 1 for e in pp)
+    # the unrelated "Marsh Family Foundation" is reported, not used
+    assert any("Marsh Family Foundation (Tulsa, OK)" in n for n in brief.report.notes)
+    assert not any("Tulsa" in e.claim for e in brief.evidence)
+    html = html_path.read_text()
+    assert "ProPublica Nonprofit Explorer" in html and "noncommercial" in html
+    # the same $48.3M figure from the foundation's own PDF and from IRS data is marked corroborated
+    pdf_assets = [e for e in brief.evidence if "$48,300,000" in e.claim and "annual-report-2024.pdf" in e.source_url]
+    assert pdf_assets and pdf_assets[0].corroborated_by
+
+
+async def test_institution_domain_collection(result):
+    brief, *_ = result
+    assert brief.report.counts["institution_domain_urls"] >= 1
+    assert any(e.section == "institution" and e.status == "verified" for e in brief.evidence)
