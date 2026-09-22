@@ -77,8 +77,9 @@ the stages while you wait.
 
 Point at the stat row.
 
-> "Roughly 550 claims extracted, about 240 verified, the rest dropped in code with a reason. Every
-> dropped claim is in the evidence CSV, so a researcher can audit what the tool refused to say."
+> "Roughly 450 claims extracted, about 220 verified, the rest dropped in code with a reason. Every
+> dropped claim is in the evidence CSV, so a researcher can audit what the tool refused to say.
+> When we had a second model judge every verified claim against its quote, 99 percent held up."
 
 Click **Open the brief**.
 
@@ -121,5 +122,7 @@ Click **Open the brief**.
   robots.txt honored, and no health, contact, religion, ethnicity, immigration or criminal data.
 - **CRM?** No access in this repo. Production would match the signal list against Salesforce.
 - **Cost and time?** About $1 and 4 to 6 minutes per brief; 15 cents for the signal watch.
-- **What's next?** Azure OpenAI provider, a real eval file with 10 known facts per subject, and a
-  precision audit by a researcher on the 25-claim sample the eval already exports.
+- **How do you know it's accurate?** Recall against a list of known facts (8 to 9 of 10 or 11 on
+  two subjects) and a model judge over every verified claim (99% supported after the last fix),
+  plus a 25-claim CSV for a researcher to hand-audit. The eval command is in the README.
+- **What's next?** Azure OpenAI provider, more subjects in the eval, and the hand audit.
