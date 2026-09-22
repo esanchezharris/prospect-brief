@@ -24,6 +24,9 @@ def test_foundation_matching_rules():
     assert foundation_is_subjects("Dorian and Imara Vexley-Marsh Foundation", "Dorian Vexley-Marsh", "", [])
     assert foundation_is_subjects("Imara Vexley-Marsh Fund", "Dorian Vexley-Marsh", "Imara Vexley-Marsh", [])
     assert not foundation_is_subjects("Marsh Family Foundation", "Dorian Vexley-Marsh", "", [])
+    # reversed name order is a different person (found in a real run: "Scott R Mackenzie Foundation" vs MacKenzie Scott)
+    assert not foundation_is_subjects("Scott R Mackenzie Foundation Inc", "MacKenzie Scott", "", [])
+    assert foundation_is_subjects("MacKenzie Scott Foundation", "MacKenzie Scott", "", [])
     assert not foundation_is_subjects("Vexley-Marsh Family Foundation", "Dorian Vexley-Marsh", "", [])
     # a suffix of the hyphenated name is NOT the same foundation, even when the real one is mentioned in evidence
     assert not foundation_is_subjects("Marsh Family Foundation", "Dorian Vexley-Marsh", "Imara Vexley-Marsh", ["The Vexley-Marsh Family Foundation was established in 2016"])

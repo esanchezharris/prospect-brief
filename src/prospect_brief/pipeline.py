@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -29,7 +30,7 @@ from .sources.institution import collect_institution_urls
 from .sources.propublica import collect_propublica
 from .textnorm import normalize
 from .trust import apply_identity, check_entailment, corroborate_and_conflict, mark_stale, source_tier
-from .verify import looks_like_instruction, quote_in_source, specifics_in_quote
+from .verify import is_wealth_estimate, looks_like_instruction, quote_in_source, specifics_in_quote
 from .write import write_brief
 
 
@@ -61,6 +62,10 @@ def verify_evidence(items: list[Evidence], docs_by_key: dict[str, Document], con
     thr = int(config.get("verify", "quote_partial_ratio_min", default=92))
     exempt = subject_name_variants(subject) if subject else []
     for e in items:
+        w = is_wealth_estimate(e.claim, e.supporting_quote)
+        if not w.passed:
+            e.status, e.drop_reason = "dropped", w.reason
+            continue
         doc = docs_by_key.get(e.cache_key)
         a = quote_in_source(e.supporting_quote, doc.text if doc else "", partial_ratio_min=thr)
         e.checks.quote = a.passed
@@ -169,16 +174,32 @@ async def run_brief(
     report.counts["sec_insider_filings"] = len(edgar_docs)
     report.counts["sec_proxy_statements"] = len(proxy_docs)
 
-    # 4. extract (sequential, bounded by wall clock)
+    # 4. extract: a few documents at a time, bounded by the wall clock
     evidence: list[Evidence] = list(edgar_ev)
-    for i, d in enumerate(on_subject, 1):
-        if time_left() < 45:
-            report.notes.append(f"extraction stopped after {i - 1} documents: wall clock budget")
-            break
-        try:
-            evidence.extend(extract_evidence(llm, config, d, subject, anchors, institution, id_prefix=f"e{i}-"))
-        except Exception as e:
-            report.notes.append(f"extract error on {d.final_url}: {type(e).__name__}: {e}")
+    workers = int(config.get("budgets", "extract_concurrency", default=4))
+    done_docs = 0
+
+    def _one(i: int, d: Document) -> list[Evidence]:
+        return extract_evidence(llm, config, d, subject, anchors, institution, id_prefix=f"e{i}-")
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending = {}
+        queue = list(enumerate(on_subject, 1))
+        while queue or pending:
+            while queue and len(pending) < workers and time_left() > 100:
+                i, d = queue.pop(0)
+                pending[pool.submit(_one, i, d)] = d
+            if not pending:
+                break
+            fut = next(iter(wait(list(pending), return_when=FIRST_COMPLETED)[0]))
+            d = pending.pop(fut)
+            try:
+                evidence.extend(fut.result())
+                done_docs += 1
+            except Exception as e:
+                report.notes.append(f"extract error on {d.final_url}: {type(e).__name__}: {e}")
+        if queue:
+            report.notes.append(f"extraction stopped after {done_docs} of {len(on_subject)} documents: wall clock budget")
     # 4b. ProPublica foundations, matched by name against the identity card and the claims seen so far
     try:
         mentioned = [f.fact for f in card.anchor_facts] + [e.claim for e in evidence]
@@ -208,7 +229,7 @@ async def run_brief(
     subject_orgs = [v for k, v in id_anchors.items() if k in ("employer", "company")] + [f.fact for f in card.anchor_facts if "foundation" in f.fact.lower()]
     for e in evidence:
         e.source_tier = source_tier(e.source_url, config, institution=institution, subject_orgs=subject_orgs)
-    corroborate_and_conflict(evidence, subject)
+    corroborate_and_conflict(evidence, subject, id_anchors)
     report.counts["claims_stale_rewritten"] = mark_stale(evidence, config)
     n_ver = sum(1 for e in evidence if e.status == "verified")
     report.counts["claims_verified"] = n_ver

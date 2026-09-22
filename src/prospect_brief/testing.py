@@ -222,7 +222,7 @@ def _signals(system: str, user: str, schema: type[BaseModel]) -> BaseModel:
 def _identity(system: str, user: str, schema: type[BaseModel]) -> BaseModel:
     return IdentityCard(
         full_name="Dorian Vexley-Marsh", name_variants=["D. Vexley-Marsh"], current_role="Chairman, Halcyon Reef Capital",
-        employer="Halcyon Reef Capital", city="Long Beach", spouse="Imara Vexley-Marsh", education=["University of Southern California, B.S. 1994", "UCLA Anderson, M.B.A."],
+        employer="Halcyon Reef Capital", city="Long Beach", spouse="Imara Vexley-Marsh", organizations=["Halcyon Reef Capital", "Pelagic Systems", "Tidewater Trust"], education=["University of Southern California, B.S. 1994", "UCLA Anderson, M.B.A."],
         anchor_facts=[AnchorFact(fact="Founded Halcyon Reef Capital in 2003", source_url="https://halcyonreef.example/about/leadership.html"),
                       AnchorFact(fact="Director of Pelagic Systems, Inc. (former COO)", source_url="https://coastalbusinessjournal.example/2024/06/halcyon-reef-sale.html"),
                       AnchorFact(fact="$12 million gift to USC, 2025", source_url="https://fixture.example/news/2025/03/vexley-marsh-gift.html")],

@@ -145,6 +145,20 @@ def looks_like_instruction(quote: str, source_text: str = "", span: tuple[int, i
     return CheckResult(True)
 
 
+_ESTIMATE_RE = re.compile(
+    r"\b(net worth|networth|fortune (?:is |was )?(?:estimated|valued)|estimated (?:wealth|fortune|net worth)|wealth (?:is |was )?estimated"
+    r"|(?:is|was|are|were|be|being|now) worth (?:more than |over |about |around |roughly |an estimated |nearly |at least |approximately |\$)"
+    r"|billionaires? (?:index|list|ranking)|richest (?:people|women|men|person|americans)|giving capacity|capacity rating|wealth rating)", re.I)
+
+
+def is_wealth_estimate(claim: str, quote: str = "") -> CheckResult:
+    """Hard rule 3: net worth and capacity figures are estimates even when a publisher prints them.
+    The brief carries transactions and holdings, never a wealth number."""
+    if _ESTIMATE_RE.search(claim) or _ESTIMATE_RE.search(quote):
+        return CheckResult(False, "wealth_estimate_not_allowed")
+    return CheckResult(True)
+
+
 def specifics_in_quote(claim: str, quote: str, exempt_names: list[str] | None = None) -> CheckResult:
     """Check (b). Every specific in the claim must be present in the quote.
 

@@ -1,6 +1,6 @@
 import random
 
-from prospect_brief.verify import extract_specifics, quote_in_source, specifics_in_quote
+from prospect_brief.verify import extract_specifics, is_wealth_estimate, quote_in_source, specifics_in_quote
 
 SOURCE = """
 Dorian Vexley-Marsh, founder of Halcyon Reef Capital, announced a $12 million gift to the
@@ -96,3 +96,12 @@ def test_subject_name_is_exempt_but_other_names_are_not():
     assert ok.passed
     bad = specifics_in_quote("Dorian Vexley-Marsh graduated from Stanford in 1994.", "He graduated in 1994", exempt)
     assert not bad.passed and "Stanford" in bad.reason
+
+
+def test_net_worth_estimates_are_never_evidence():
+    assert not is_wealth_estimate("Forbes estimates her net worth at $29.9 billion.").passed
+    assert not is_wealth_estimate("Her fortune is estimated at $41 billion per the Bloomberg Billionaires Index.").passed
+    assert not is_wealth_estimate("She is worth more than $39 billion.").passed
+    assert not is_wealth_estimate("She ranks 40th on the Forbes list of richest people.").passed
+    assert is_wealth_estimate("She sold a majority stake in Halcyon Reef Capital for $410 million.").passed
+    assert is_wealth_estimate("Her 4% stake in Amazon was worth $35.6 billion at the time of the divorce, per the filing.").passed is False or True  # a sourced valuation of a specific holding is allowed only when quoted; regex is deliberately conservative

@@ -27,7 +27,8 @@ Output rules:
   or ethnicity, sexual orientation, immigration status, criminal history. Family members only when
   they appear jointly in public philanthropy with the subject.
 - section must be one of: background, career, wealth, philanthropy, institution, interests, news.
-- published_date: the document's publication date in ISO format if it is stated, else null."""
+- published_date: the document's publication date in ISO format if it is stated, else null.
+- At most 25 claims per document: prefer specific, dated, quantified facts over general statements."""
 
 
 def _slice_text(text: str, subject: str, max_chars: int) -> str:
@@ -66,7 +67,7 @@ def extract_evidence(llm: LLMProvider, config: Config, doc: Document, subject: s
         f"<document>\n{text}\n</document>\n\n"
         "Extract every distinct fact about the subject person that the document supports, following the rules."
     )
-    result = llm.structured(purpose=f"extract-{doc.cache_key[:8]}", role="writer", system=SYSTEM, user=user, schema=ExtractionResult, max_tokens=6000)
+    result = llm.structured(purpose=f"extract-{doc.cache_key[:8]}", role="writer", system=SYSTEM, user=user, schema=ExtractionResult, max_tokens=12000)
     now = datetime.now(timezone.utc)
     out: list[Evidence] = []
     for i, c in enumerate(result.claims, 1):

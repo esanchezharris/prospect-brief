@@ -55,18 +55,28 @@ def _phrase_in(phrase: str, text: str) -> bool:
     return re.search(r"(?<![\w\-])" + re.escape(_loose(phrase)) + r"(?![\w\-])", _loose(text)) is not None
 
 
+def _pos(word: str, text: str) -> int:
+    m = re.search(r"(?<![\w\-])" + re.escape(_loose(word)) + r"(?![\w\-])", _loose(text))
+    return m.start() if m else -1
+
+
 def foundation_is_subjects(org_name: str, subject: str, spouse: str, mentioned: list[str]) -> bool:
-    """Keep a foundation only if its name carries the subject's surname (as a whole word, hyphens intact)
-    AND either the given name, the spouse's name, or the foundation is named in already-collected
-    evidence or the identity card."""
+    """Keep a foundation only if its name carries the subject's surname (whole word, hyphens intact)
+    AND either the subject's given name BEFORE the surname ("MacKenzie Scott Foundation", not
+    "Scott R Mackenzie Foundation"), the spouse's given name before the surname, or the foundation
+    is named in already-collected evidence or the identity card."""
     surname = subject.split()[-1]
     given = subject.split()[0]
-    if not _phrase_in(surname, org_name):
+    s_pos = _pos(surname, org_name)
+    if s_pos < 0:
         return False
-    if _phrase_in(given, org_name):
+    g_pos = _pos(given, org_name)
+    if 0 <= g_pos < s_pos:
         return True
-    if spouse and _phrase_in(spouse.split()[0], org_name):
-        return True
+    if spouse:
+        sp_pos = _pos(spouse.split()[0], org_name)
+        if 0 <= sp_pos < s_pos:
+            return True
     return any(_phrase_in(org_name, m) for m in mentioned)
 
 

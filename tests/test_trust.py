@@ -55,3 +55,36 @@ def test_amounts_never_conflict_with_dates_or_other_periods():
     corroborate_and_conflict([est, a24, a23, a24b], "Dorian Vexley-Marsh")
     assert not est.conflicts_with and not a23.conflicts_with  # different kinds / different periods
     assert a24b.id in a24.conflicts_with  # same period, different amount
+
+
+def test_date_only_claims_about_different_events_do_not_conflict():
+    novel = _ev("n1", "MacKenzie Scott published her first novel, The Testing of Luther Albright, in 2005.", "https://a.example/1", section="background", ctype="publication")
+    award = _ev("n2", "MacKenzie Scott won an American Book Award in 2006 for The Testing of Luther Albright.", "https://b.example/2", section="background", ctype="publication")
+    p1 = _ev("p1", "MacKenzie Scott signed the Giving Pledge in May 2019.", "https://a.example/3", ctype="pledge")
+    p2 = _ev("p2", "MacKenzie Scott signed the Giving Pledge in 2019.", "https://b.example/4", ctype="pledge")
+    corroborate_and_conflict([novel, award, p1, p2], "MacKenzie Scott")
+    assert not novel.conflicts_with and not p1.conflicts_with
+    assert p2.id in p1.corroborated_by
+
+
+def test_subjects_own_organizations_do_not_create_conflicts():
+    a = _ev("g1", "MacKenzie Scott donated $20 million to Climate Lead through Yield Giving in 2025.", "https://a.example/1")
+    b = _ev("g2", "MacKenzie Scott's Yield Giving gave $70 million to UNCF in 2025.", "https://b.example/2")
+    corroborate_and_conflict([a, b], "MacKenzie Scott", {"employer": "Yield Giving"})
+    assert not a.conflicts_with
+
+
+def test_marriage_and_divorce_years_do_not_conflict():
+    m = _ev("m1", "MacKenzie Scott married Jeff Bezos in 1993.", "https://a.example/1", section="background", ctype="personal")
+    d = _ev("m2", "MacKenzie Scott divorced Amazon founder Jeff Bezos in 2019.", "https://b.example/2", section="background", ctype="personal")
+    corroborate_and_conflict([m, d], "MacKenzie Scott")
+    assert not m.conflicts_with
+
+
+def test_year_total_and_lifetime_total_do_not_conflict():
+    a = _ev("t1", "MacKenzie Scott's 2020 charitable giving totaled $5.8 billion.", "https://a.example/1")
+    b = _ev("t2", "MacKenzie Scott's total lifetime giving is about $19.25 billion, according to her website.", "https://b.example/2")
+    m = _ev("t3", "MacKenzie Scott married Jeff Bezos in 1993.", "https://a.example/3", section="background", ctype="personal")
+    y = _ev("t4", "MacKenzie Scott was married to Jeff Bezos for 25 years.", "https://b.example/4", section="background", ctype="personal")
+    corroborate_and_conflict([a, b, m, y], "MacKenzie Scott")
+    assert not a.conflicts_with and not m.conflicts_with

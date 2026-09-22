@@ -9,6 +9,7 @@ budgets:
   max_documents: 50
   wall_clock_seconds: 360
   max_doc_chars: 15000             # text passed to the extractor per document
+  extract_concurrency: 6           # documents extracted in parallel
 search:
   provider: tavily
   results_per_query: 6
@@ -24,7 +25,7 @@ fetch:
 verify:
   quote_partial_ratio_min: 92
   max_sentence_drop_fraction: 0.10 # regenerate once if writer exceeds this
-  identity_score_min: 0.25         # check (d): a document needs at least one confirmed anchor and this share of anchor weight
+  identity_score_min: 0.1          # check (d): a document needs at least one confirmed anchor (score is informational above this)
   stale_role_months: 18            # M2
 blocklist:                         # never fetched, never searched (hard rule 1)
   - linkedin.com

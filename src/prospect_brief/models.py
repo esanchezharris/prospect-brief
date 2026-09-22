@@ -227,6 +227,7 @@ class IdentityCard(BaseModel):
     city: str = ""
     spouse: str = Field(default="", description="Spouse's name ONLY if the sources show them jointly in public philanthropy with the subject (joint gift, family foundation officer); otherwise empty.")
     education: list[str] = Field(default_factory=list)
+    organizations: list[str] = Field(default_factory=list, description="Companies, foundations or organizations the sources tie directly to the subject (employer, founded, board, signatory), e.g. ['Amazon', 'Yield Giving']. Used as identity anchors.")
     anchor_facts: list[AnchorFact] = Field(default_factory=list, description="3 to 5 identifying facts, each with its source.")
     namesakes: list[Namesake] = Field(default_factory=list)
     can_separate: bool = Field(description="True if the subject can be told apart from every namesake using the given anchors.")

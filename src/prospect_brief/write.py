@@ -15,6 +15,9 @@ sentence must be supported by one or more evidence ids from the list, and you mu
 in evidence_ids. Never combine facts into totals, never estimate wealth or giving capacity, never
 infer anything not stated in a row. Write in plain, neutral prose, third person, past tense for
 events. Do not include citation markers, brackets or ids inside the sentence text itself.
+Prefer tier 1 and tier 2 evidence; use a tier 3 row only when no better row covers the fact.
+When the same fact appears in several rows, cite all of their ids on one sentence rather than
+repeating the fact.
 
 Sections (use exactly these keys; leave a section's sentences empty if there is no evidence):
 summary (3-5 sentences drawn from the strongest evidence), background, career, wealth,

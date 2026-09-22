@@ -13,6 +13,7 @@ import json
 from urllib.parse import quote, urlparse
 
 from .cache import DocumentCache
+from .textnorm import normalize
 from .llm import LLMProvider, UNTRUSTED_INPUT_NOTICE
 from .models import IdentityCard, SearchResult
 from .search import SearchProvider
@@ -98,6 +99,8 @@ def format_card(card: IdentityCard, anchors: dict[str, str]) -> str:
         lines.append(f"  Spouse (named jointly in public philanthropy): {card.spouse}")
     if card.education:
         lines.append(f"  Education: {'; '.join(card.education)}")
+    if card.organizations:
+        lines.append(f"  Organizations: {', '.join(card.organizations)}")
     lines.append("  Anchor facts:")
     for f in card.anchor_facts:
         lines.append(f"    - {f.fact}  <{f.source_url}>")
@@ -121,4 +124,11 @@ def confirmed_anchors(card: IdentityCard, anchors: dict[str, str]) -> dict[str, 
         out["spouse"] = card.spouse
     for i, edu in enumerate(card.education[:2]):
         out.setdefault(f"school{i or ''}", edu)
+    existing = {normalize(v) for v in out.values()}
+    n = 0
+    for org in card.organizations[:6]:
+        if normalize(org) and normalize(org) not in existing:
+            out[f"company{n or ''}"] = org
+            existing.add(normalize(org))
+            n += 1
     return out

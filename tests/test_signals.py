@@ -15,6 +15,19 @@ def test_parse_display_name():
     assert parse_display_name("Legion Capital Acquisition Corp.  (CIK 0002151558)") == ("Legion Capital Acquisition Corp.", None)
 
 
+def test_multi_ticker_display_name():
+    assert parse_display_name("T-Mobile US, Inc.  (TMUS, TMUSI, TMUSL, TMUSZ)  (CIK 0001283699)") == ("T-Mobile US, Inc.", "TMUS")
+
+
+def test_resolve_full_name_from_filing_text():
+    from prospect_brief.signals.extract import resolve_full_name
+
+    doc = "Management. Jonathan R. Ament has served as our Director of Finance since 2023. Mr. Ament holds a Masters of Accountancy from the University of Southern California. Mr. Ament previously worked at Deloitte."
+    assert resolve_full_name("Mr. Ament", doc) == ("Jonathan R. Ament", True)
+    assert resolve_full_name("Priya Ellsworth-Nakamura", doc) == ("Priya Ellsworth-Nakamura", False)
+    assert resolve_full_name("Ms. Nobody", doc) == ("Ms. Nobody", False)
+
+
 def test_hit_from_json_builds_document_url():
     h = hit_from_json({"_id": "0001213900-26-097368:ea0304337-01.htm", "_source": {"ciks": ["0002151558"], "display_names": ["Legion Capital Acquisition Corp.  (CIK 0002151558)"], "root_forms": ["S-1"], "form": "S-1", "file_date": "2026-09-04", "adsh": "0001213900-26-097368", "items": []}})
     assert h.url == "https://www.sec.gov/Archives/edgar/data/2151558/000121390026097368/ea0304337-01.htm"

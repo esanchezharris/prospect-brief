@@ -20,6 +20,10 @@ from .verify import extract_specifics
 _ANCHOR_WEIGHTS = {"employer": 1.0, "company": 1.0, "school": 0.8, "school1": 0.6, "spouse": 1.0, "city": 0.5, "age": 0.5}
 
 
+def _anchor_weight(key: str) -> float:
+    return _ANCHOR_WEIGHTS.get(key.rstrip("0123456789"), 0.5)
+
+
 def _anchor_present(value: str, text_norm: str) -> bool:
     v = normalize(value)
     if not v:
@@ -37,7 +41,7 @@ def identity_score(doc: Document, anchors: dict[str, str]) -> tuple[float, list[
     hit = 0.0
     reasons: list[str] = []
     for k, v in anchors.items():
-        w = _ANCHOR_WEIGHTS.get(k, 0.5)
+        w = _anchor_weight(k)
         total += w
         if _anchor_present(v, text_norm):
             hit += w
@@ -153,36 +157,60 @@ def _split_figures(claim: str) -> tuple[set[str], set[str]]:
     codes = set(_FORM_CODE_RE.findall(claim))
     norm = lambda x: normalize(x).replace(",", "").replace(" ", "")
     money = {norm(x) for x in s["money"]}
-    when = {norm(x) for x in s["dates"] + s["numbers"] if x not in codes}
+    when = set()
+    for x in s["dates"]:
+        when.update(re.findall(r"\b(?:19|20)\d{2}\b", x) or [norm(x)])  # dates compare by year
+    when.update(norm(x) for x in s["numbers"] if x not in codes)
     return money, when
 
 
-def _is_conflict(a_claim: str, b_claim: str) -> bool:
-    """Same kind of figure, different value, same period. An amount never conflicts with a date."""
+_YEAR_RE = re.compile(r"^(?:19|20)\d{2}$")
+
+
+def _is_conflict(a_claim: str, b_claim: str, sim: int) -> bool:
+    """Same kind of figure, different value, same period. An amount never conflicts with a date; an
+    amount for a stated year never conflicts with an amount for an unstated period ("$5.8B in 2020"
+    vs "$19B lifetime"); two date claims conflict only when both state years, the years differ, and
+    the wording is near-identical."""
     ma, wa = _split_figures(a_claim)
     mb, wb = _split_figures(b_claim)
+    ya = {y for y in wa if _YEAR_RE.match(y)}
+    yb = {y for y in wb if _YEAR_RE.match(y)}
     if ma and mb:
-        return ma != mb and (not wa or not wb or wa == wb)
+        return ma != mb and (not ya or not yb or ya == yb)
     if not ma and not mb:
-        return bool(wa and wb) and wa != wb
+        # "published in 2005, won an award in 2006" is not in conflict with "published in 2005"
+        return bool(ya and yb) and not (ya <= yb or yb <= ya) and sim >= 90
     return False
 
 
+_ADJECTIVE_ENTITIES = {"black", "white", "american", "african", "asian", "hispanic", "latino", "native", "jewish", "christian", "european", "western", "southern", "northern", "eastern"}
+
+
 def _entities(claim: str, subject_names: set[str]) -> set[str]:
-    """Non-subject proper-noun runs in a claim, normalized."""
+    """Non-subject proper-noun runs in a claim, normalized. Single capitalized adjectives are not entities."""
     out = set()
     for run in extract_specifics(claim)["proper_nouns"]:
-        n = normalize(run)
-        if n and n not in subject_names and not all(w in subject_names for w in n.split()):
-            out.add(n)
+        n = normalize(re.sub(r"[’']s\b", "", run))  # possessives: "Scott's" is the subject, not an entity "scott s"
+        if not n or n in subject_names or all(w in subject_names for w in n.split()):
+            continue
+        if " " not in n and n in _ADJECTIVE_ENTITIES:
+            continue
+        out.add(n)
     return out
 
 
-def corroborate_and_conflict(evidence: list[Evidence], subject: str = "", *, same_fact: int = 85, same_figures: int = 60, related: int = 50) -> None:
+def corroborate_and_conflict(evidence: list[Evidence], subject: str = "", anchors: dict[str, str] | None = None, *, same_fact: int = 85, same_figures: int = 60, related: int = 65) -> None:
     """Corroborated: the same fact (same figures, near-identical wording) from two independent domains.
     Conflict: same section and claim type from two independent domains, about the same named entity,
     with different figures (amounts or dates). Conflicts are surfaced, never resolved."""
     names = {normalize(subject)} | {w for w in normalize(subject).split()}
+    # the subject's own employer, companies and foundations appear in many unrelated claims and never
+    # identify "the same fact"; only recipients, counterparties and named things do
+    for k, v in (anchors or {}).items():
+        if k.rstrip("0123456789") in ("employer", "company", "spouse"):
+            names.add(normalize(v))
+            names.update(w for w in normalize(v).split() if len(w) > 3)
     live = [e for e in evidence if e.status == "verified"]
     for i, a in enumerate(live):
         ta, fa, ea = _topic(a.claim), _figures(a.claim), _entities(a.claim, names)
@@ -195,7 +223,7 @@ def corroborate_and_conflict(evidence: list[Evidence], subject: str = "", *, sam
                 # identical figures from independent domains with related wording, or near-identical wording
                 a.corroborated_by.append(b.id)
                 b.corroborated_by.append(a.id)
-            elif a.claim_type == b.claim_type and sim >= related and (ea & _entities(b.claim, names)) and _is_conflict(a.claim, b.claim):
+            elif a.claim_type == b.claim_type and sim >= related and (ea & _entities(b.claim, names)) and _is_conflict(a.claim, b.claim, sim):
                 a.conflicts_with.append(b.id)
                 b.conflicts_with.append(a.id)
 
