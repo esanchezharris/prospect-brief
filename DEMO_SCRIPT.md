@@ -6,8 +6,10 @@ brief a prospect researcher would trust, and that every safeguard is real and te
 ## Before the meeting (10 minutes ahead)
 
 1. `uv run prospect-brief serve` and open http://127.0.0.1:8765 in a browser at 100% zoom.
-2. In panel 2 (Build a brief), enter your subject and anchors and click **Build brief**.
-   Leave it running; it takes about 5 minutes and about $1. You will come back to it in step 3.
+2. In panel 2 (Build a brief), enter your subject and anchors and click **Build brief**. After
+   about 20 seconds the identity card appears with a **Is this the right person?** box: click
+   **Yes, research this person**. (Untick "Pause after the identity card" if you would rather it
+   run straight through.) Leave it running; it takes about 5 minutes and about $1.10.
 3. In another tab, open a finished brief from **Previous runs** as a fallback if the live run is late.
 4. Click **Load latest** in panel 1 so the signal-watch table is on screen when you start.
 
@@ -69,7 +71,7 @@ Scroll to panel 2. The stage cards should be filled in; if the writer is still r
 the stages while you wait.
 
 > "Identity first: the tool built an identity card from a few searches and Wikipedia, listed the
-> namesakes it found, and confirmed it can tell them apart with the anchors I gave. Then a research
+> namesakes it found, and paused until I confirmed it had the right person. Then a research
 > plan, 28 searches, about 40 readable documents, structured sources like SEC filings and IRS
 > foundation data, extraction, and verification."
 
@@ -97,6 +99,16 @@ Click **Open the brief**.
 > testing, and a human in the loop at identity and at every footnote. The model provider is one
 > file, so Azure OpenAI drops in without touching the pipeline. A brief costs about a dollar and
 > takes under six minutes. Happy to go deeper on any of the checks."
+
+## If something goes wrong
+
+- **You reloaded the page or closed the tab:** the run keeps going on the server. Reopen the page;
+  it reattaches to the running job and replays the log, including the confirm box if it is waiting.
+- **The identity card says it cannot separate the person:** the run stops on purpose. Add an
+  anchor (employer, school, city, company) and run again. This is the human-in-the-loop story, not
+  a failure; "John Smith" with only a city anchor stops and lists four namesakes.
+- **The live run is late:** open the fallback brief from **Previous runs** and narrate from that.
+- **No network:** the trust check and the fixture signal watch work offline; the real brief does not.
 
 ## If asked
 

@@ -143,7 +143,8 @@ every mutated version is rejected.
 
 Before any research, the tool looks the person up (a few searches plus Wikipedia and Wikidata),
 prints an identity card with the anchor facts, their sources, and every namesake it found, and
-asks you to confirm it is the right person (`--yes` skips the prompt for scripted use). If the
+asks you to confirm it is the right person, in the terminal or on the demo page (`--yes` and the
+page's checkbox skip the pause for scripted use). If the
 anchors cannot separate the person from a namesake, it stops and asks for another anchor instead
 of guessing. A prospect researcher is expected to click footnotes and check them, and the
 signal watch stops at a list of names with a ready-to-copy command for each person: it does not

@@ -35,7 +35,10 @@ from .write import write_brief
 
 
 def make_run_id(subject: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", subject.lower()).strip("-")[:40]
+    import unicodedata
+
+    ascii_name = unicodedata.normalize("NFKD", subject).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_name.lower()).strip("-")[:40] or "subject"
     return f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}-{slug}"
 
 

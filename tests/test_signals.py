@@ -76,3 +76,10 @@ async def test_signal_watch_fixture(config):
     # every signal prompt framed the passages as untrusted documents
     sig = [c for c in llm.calls if c["purpose"].startswith("signals-")]
     assert len(sig) == 3 and all("untrusted data" in c["system"] and "<document" in c["user"] for c in sig)
+
+
+def test_unicode_names_make_readable_run_ids():
+    from prospect_brief.pipeline import make_run_id
+
+    assert make_run_id("José Álvarez-Núñez").endswith("-jose-alvarez-nunez")
+    assert make_run_id("李小龙").endswith("-subject")

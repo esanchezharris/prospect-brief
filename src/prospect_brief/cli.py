@@ -116,7 +116,10 @@ def signals(institution: str, days: int, forms: str, config_path: Path | None, l
         run_dir = config.runs_dir / f"signals-{institution.lower().replace(' ', '-')[:30]}"
         run_dir.mkdir(parents=True, exist_ok=True)
         llm = AnthropicProvider(config, run_dir)
-    html_path, csv_path = asyncio.run(run_signals(institution=institution, days=days, forms=form_list, config=config, llm=llm, max_filings=max_filings, transport=transport, log=click.echo))
+    try:
+        html_path, csv_path = asyncio.run(run_signals(institution=institution, days=days, forms=form_list, config=config, llm=llm, max_filings=max_filings, transport=transport, log=click.echo))
+    except ValueError as e:
+        raise click.ClickException(str(e))
     click.echo(f"\nHTML: {html_path}\nCSV:  {csv_path}")
 
 
