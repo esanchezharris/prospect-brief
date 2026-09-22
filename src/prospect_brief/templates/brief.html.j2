@@ -21,6 +21,9 @@
   sup.fn { font-size:7.5pt; line-height:0; position:relative; }
   sup.fn a { color:var(--accent); text-decoration:none; padding:0 1px; }
   sup.fn a:hover, sup.fn a:focus { text-decoration:underline; }
+  sup.fn a.t3::after { content:"°"; }
+  .conflict { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:6px 0 10px; }
+  .conflict div { border:1px solid var(--rule); padding:6px 8px; font-size:10pt; background:var(--card); }
   .card { display:none; position:absolute; left:0; bottom:1.4em; z-index:10; width:340px; background:var(--card); color:var(--ink); border:1px solid var(--rule); box-shadow:0 2px 10px rgba(0,0,0,.15); padding:9px 11px; font-size:9pt; line-height:1.35; font-weight:normal; text-align:left; white-space:normal; }
   sup.fn:hover .card, sup.fn:focus-within .card { display:block; }
   .card q { display:block; font-style:italic; margin-bottom:5px; }
@@ -55,7 +58,7 @@
 </header>
 
 {% macro sentence(s) -%}
-{{ s.text }}{% for eid in s.evidence_ids %}{% set n = fn_numbers[eid] %}{% set e = evidence_by_id[eid] %}<sup class="fn"><a href="#src-{{ n }}" id="ref-{{ n }}-{{ loop.index0 }}" aria-describedby="card-{{ n }}">{{ n }}</a><span class="card" role="tooltip"><q>{{ e.supporting_quote }}</q><span class="src">{{ e.publisher }}{% if e.published_date %} · {{ e.published_date }}{% endif %}<span class="tier">tier {{ e.source_tier }}</span><br><a href="{{ e.source_url }}" target="_blank" rel="noopener">{{ e.source_url }}</a></span></span></sup>{% endfor %}
+{{ s.text }}{% for eid in s.evidence_ids %}{% set n = fn_numbers[eid] %}{% set e = evidence_by_id[eid] %}<sup class="fn"><a href="#src-{{ n }}" class="{{ 't3' if e.source_tier == 3 }}" title="{{ 'tier 3 source' if e.source_tier == 3 else '' }}">{{ n }}</a><span class="card" role="tooltip"><q>{{ e.supporting_quote }}</q><span class="src">{{ e.publisher }}{% if e.published_date %} · {{ e.published_date }}{% endif %}<span class="tier">tier {{ e.source_tier }}</span><br><a href="{{ e.source_url }}" target="_blank" rel="noopener">{{ e.source_url }}</a></span></span></sup>{% endfor %}
 {%- endmacro %}
 
 {% for sec in section_meta %}
@@ -73,13 +76,23 @@
 <ul class="tp">{% for t in brief.talking_points %}<li>{{ sentence(t) }}</li>{% endfor %}</ul>
 {% else %}<p class="empty">None.</p>{% endif %}
 
-<h2>{{ section_meta|length + 2 }}. Could not verify / gaps</h2>
+<h2>{{ section_meta|length + 2 }}. Could not verify / gaps / possibly a different person / conflicts</h2>
 {% if brief.gaps %}<ul class="gaps">{% for g in brief.gaps %}<li>{{ g }}</li>{% endfor %}</ul>{% else %}<p class="empty">Nothing recorded.</p>{% endif %}
+{% if brief.possibly_different_person %}
+<p><strong>Possibly a different person</strong> (excluded: no confirmed identity anchor in the document):</p>
+<ul class="gaps">{% for d in brief.possibly_different_person %}<li>{{ d.title }} <a href="{{ d.url }}" target="_blank" rel="noopener">{{ d.url }}</a></li>{% endfor %}</ul>
+{% endif %}
+{% if brief.conflicts %}
+<p><strong>Conflicting information</strong> (shown side by side, not resolved):</p>
+{% for pair in brief.conflicts %}
+<div class="conflict">{% for eid in pair %}{% set e = evidence_by_id[eid] %}<div>{{ e.claim }}<sup class="fn"><a href="#src-{{ fn_numbers[eid] }}">{{ fn_numbers[eid] }}</a></sup><br><span class="src" style="color:var(--muted);font-size:9pt">{{ e.publisher }}{% if e.published_date %} · {{ e.published_date }}{% endif %} · tier {{ e.source_tier }}</span></div>{% endfor %}</div>
+{% endfor %}
+{% endif %}
 {% if dropped %}
 <p class="ai">{{ dropped|length }} extracted claim{{ 's' if dropped|length != 1 }} failed verification and {{ 'were' if dropped|length != 1 else 'was' }} excluded. They are listed in evidence.csv with the reason.</p>
 {% endif %}
 
-<h2>{{ section_meta|length + 3 }}. Sources</h2>
+<h2>{{ section_meta|length + 3 }}. Sources <span style="font-weight:normal;text-transform:none;letter-spacing:0;font-size:9.5pt;color:var(--muted)">(tier 1 = primary or official; 2 = established news; 3 = everything else, marked ° in the text)</span></h2>
 <ol class="sources">
 {% for src in sources %}
 <li id="src-{{ loop.index }}"><strong>{{ src.title or src.url }}</strong>{% if src.publisher %}, {{ src.publisher }}{% endif %}{% if src.published_date %}, published {{ src.published_date }}{% endif %}; accessed {{ src.accessed_at.strftime('%Y-%m-%d') }}; tier {{ src.tier }}. <a href="{{ src.url }}" target="_blank" rel="noopener">{{ src.url }}</a></li>

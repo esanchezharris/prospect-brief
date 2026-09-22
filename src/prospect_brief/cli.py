@@ -46,12 +46,6 @@ def run(name: str, anchors: tuple[str, ...], institution: str, yes: bool, config
     run_dir = config.runs_dir / make_run_id(name)
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    if not yes:
-        click.echo(f"Subject: {name}\nAnchors: {anchor_map}\nInstitution: {institution}")
-        click.echo("Identity resolution arrives in M2; for now confirm these anchors describe one specific person.")
-        if not click.confirm("Proceed?", default=True):
-            raise SystemExit(1)
-
     transport = None
     if llm_name == "fake" or search_name == "mock":
         from .testing import build_fake_llm, fixture_transport, mock_search
@@ -73,13 +67,21 @@ def run(name: str, anchors: tuple[str, ...], institution: str, yes: bool, config
 
         search = TavilyProvider(exclude_domains=config.blocklist, user_agent=config.user_agent)
 
+    def confirm(card) -> bool:
+        return click.confirm("Is this the right person? Proceed with research?", default=True)
+
     async def go():
         try:
-            return await run_brief(subject=name, anchors=anchor_map, institution=institution, config=config, llm=llm, search=search, run_dir=run_dir, transport=transport, log=click.echo)
+            return await run_brief(subject=name, anchors=anchor_map, institution=institution, config=config, llm=llm, search=search, run_dir=run_dir, transport=transport, log=click.echo, confirm=confirm, yes=yes)
         finally:
             await search.aclose()
 
-    brief, html_path = asyncio.run(go())
+    from .pipeline import IdentityUnresolved
+
+    try:
+        brief, html_path = asyncio.run(go())
+    except IdentityUnresolved as e:
+        raise click.ClickException(str(e))
     click.echo(f"\nBrief: {html_path}\nRun log: {run_dir}")
 
 

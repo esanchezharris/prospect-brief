@@ -53,9 +53,9 @@ DOCS = {
 <p>Focus areas: marine conservation, engineering education, and coastal community health clinics in Los Angeles County.</p>""",
     ),
     # 5. alumni magazine with a CONFLICTING gift amount
-    "fixture.example/magazine/spring-2025/ocean-robotics.html": page(
+    "viterbimagazine.example/spring-2025/ocean-robotics.html": page(
         "A new wave: alumnus endows ocean robotics center",
-        """<p>Spring 2025. Alumnus Dorian Vexley-Marsh (B.S. ME ’94) has committed $10 million to establish the Vexley-Marsh Center for Ocean Robotics, the largest gift in the history of the department.</p>
+        """<p>Spring 2025. Alumnus Dorian Vexley-Marsh (B.S. ME ’94) has committed $10 million to the University of Southern California to establish the Vexley-Marsh Center for Ocean Robotics, the largest gift in the history of the department.</p>
 <p>“Engineering students should get their boots wet,” Vexley-Marsh told the magazine. He is chairman of Halcyon Reef Capital in Long Beach.</p>""",
         "USC Viterbi Magazine · Spring 2025",
     ),
@@ -93,7 +93,7 @@ MANIFEST = [
     {"url": "https://coastalbusinessjournal.example/2024/06/halcyon-reef-sale.html", "title": "Halcyon Reef Capital founder sells majority stake", "keywords": ["halcyon", "sold", "sale", "stake", "career", "business", "company", "wealth", "transaction"]},
     {"url": "https://halcyonreef.example/about/leadership.html", "title": "Leadership | Halcyon Reef Capital", "keywords": ["halcyon", "chairman", "founder", "biography", "career", "education", "background", "board"]},
     {"url": "https://vexleymarshfoundation.example/grants.html", "title": "Grants | Vexley-Marsh Family Foundation", "keywords": ["foundation", "grants", "philanthropy", "family", "nonprofit"]},
-    {"url": "https://fixture.example/magazine/spring-2025/ocean-robotics.html", "title": "A new wave: alumnus endows ocean robotics center", "keywords": ["alumn", "usc", "southern california", "gift", "center", "robotics", "institution"]},
+    {"url": "https://viterbimagazine.example/spring-2025/ocean-robotics.html", "title": "A new wave: alumnus endows ocean robotics center", "keywords": ["alumn", "usc", "southern california", "gift", "center", "robotics", "institution"]},
     {"url": "https://buckeyedental.example/team/dorian-vexley-marsh.html", "title": "Dr. Dorian Vexley-Marsh, DDS", "keywords": ["vexley-marsh", "background", "education", "board", "donat"]},
     {"url": "https://blocked.example/profiles/dorian-vexley-marsh.html", "title": "Dorian Vexley-Marsh Net Worth 2025", "keywords": ["vexley-marsh", "wealth", "net worth", "assets"]},
     {"url": "https://oceantechweekly.example/2025/interview-vexley-marsh.html", "title": "Interview: Dorian Vexley-Marsh on underwater autonomy", "keywords": ["interview", "interests", "causes", "robotics", "news", "statement"]},

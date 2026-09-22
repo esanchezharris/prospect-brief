@@ -144,6 +144,9 @@ class Brief(BaseModel):
     talking_points: list[TalkingPoint]
     evidence: list[Evidence]
     gaps: list[str] = Field(default_factory=list)
+    possibly_different_person: list[dict] = Field(default_factory=list)  # {title, url, identity_score}
+    conflicts: list[list[str]] = Field(default_factory=list)              # pairs of evidence ids
+    identity: "IdentityCard | None" = None
     report: RunReport
 
 
@@ -201,3 +204,42 @@ class Signal(BaseModel):
     status: Status = "verified"
     drop_reason: str | None = None
     command: str = ""
+
+
+# --- identity resolution (M2) -----------------------------------------------------------
+
+
+class AnchorFact(BaseModel):
+    fact: str = Field(description="One short identifying fact, e.g. 'Founder of Halcyon Reef Capital'.")
+    source_url: str = Field(description="URL of the search result or page that states it.")
+
+
+class Namesake(BaseModel):
+    description: str = Field(description="Who this other person with the same name is, and how they differ from the subject.")
+    source_url: str = ""
+
+
+class IdentityCard(BaseModel):
+    full_name: str
+    name_variants: list[str] = Field(default_factory=list, description="Other spellings or forms of the name seen in sources.")
+    current_role: str = Field(default="", description="Current role and employer if stated in sources, else empty.")
+    employer: str = ""
+    city: str = ""
+    spouse: str = Field(default="", description="Spouse's name ONLY if the sources show them jointly in public philanthropy with the subject (joint gift, family foundation officer); otherwise empty.")
+    education: list[str] = Field(default_factory=list)
+    anchor_facts: list[AnchorFact] = Field(default_factory=list, description="3 to 5 identifying facts, each with its source.")
+    namesakes: list[Namesake] = Field(default_factory=list)
+    can_separate: bool = Field(description="True if the subject can be told apart from every namesake using the given anchors.")
+    reasoning: str = Field(description="One or two sentences on how the anchors pin down the subject.")
+
+
+class EntailmentVerdict(BaseModel):
+    id: str
+    verdict: Literal["supports", "partially", "no"]
+
+
+class EntailmentVerdicts(BaseModel):
+    verdicts: list[EntailmentVerdict]
+
+
+Brief.model_rebuild()

@@ -12,7 +12,10 @@ from pydantic import BaseModel
 
 from .config import ROOT
 from .llm import FakeLLM
-from .models import BriefDraft, BriefSection, ExtractionResult, PassageExtraction, PassageExtractions, PlannedQuery, RawClaim, ResearchPlan, Sentence, TalkingPoint
+from .models import (
+    AnchorFact, BriefDraft, BriefSection, EntailmentVerdict, EntailmentVerdicts, ExtractionResult, IdentityCard, Namesake,
+    PassageExtraction, PassageExtractions, PlannedQuery, RawClaim, ResearchPlan, Sentence, TalkingPoint,
+)
 from .search import MockSearchProvider
 
 CORPUS = ROOT / "tests" / "fixtures" / "corpus"
@@ -83,6 +86,9 @@ SCRIPTED: dict[str, list[tuple[str, str, str, str]]] = {
          "June 18, 2024. Dorian Vexley-Marsh has agreed to sell a majority stake in Halcyon Reef Capital, the Long Beach investment firm he founded in 2003, to Meridian Partners for $410 million"),
         ("Dorian Vexley-Marsh served as chief operating officer of Pelagic Systems from 1998 to 2003.", "career", "role",
          "He previously served as chief operating officer of Pelagic Systems, a maker of underwater drones, from 1998 to 2003"),
+        # PLANTED: passes checks (a) and (b) but the quote does not support the claim; entailment (c) must drop it
+        ("Dorian Vexley-Marsh founded Pelagic Systems.", "career", "role",
+         "He previously served as chief operating officer of Pelagic Systems, a maker of underwater drones"),
     ],
     "halcyonreef.example/about/leadership.html": [
         ("Dorian Vexley-Marsh founded Halcyon Reef Capital in 2003 and was its chief executive officer until 2024.", "career", "role",
@@ -99,10 +105,10 @@ SCRIPTED: dict[str, list[tuple[str, str, str, str]]] = {
         ("The foundation's focus areas are marine conservation, engineering education, and coastal community health clinics in Los Angeles County.", "interests", "statement",
          "Focus areas: marine conservation, engineering education, and coastal community health clinics in Los Angeles County"),
     ],
-    "fixture.example/magazine/spring-2025/ocean-robotics.html": [
+    "viterbimagazine.example/spring-2025/ocean-robotics.html": [
         # CONFLICT with the $12 million figure in the news release
-        ("Dorian Vexley-Marsh committed $10 million to establish the Vexley-Marsh Center for Ocean Robotics.", "philanthropy", "gift",
-         "Alumnus Dorian Vexley-Marsh (B.S. ME ’94) has committed $10 million to establish the Vexley-Marsh Center for Ocean Robotics"),
+        ("Dorian Vexley-Marsh committed $10 million to the University of Southern California to establish the Vexley-Marsh Center for Ocean Robotics.", "philanthropy", "gift",
+         "Alumnus Dorian Vexley-Marsh (B.S. ME ’94) has committed $10 million to the University of Southern California to establish the Vexley-Marsh Center for Ocean Robotics"),
     ],
     "buckeyedental.example/team/dorian-vexley-marsh.html": [
         # NAMESAKE: a naive model might emit these; identity check (d) must keep them out (M2)
@@ -203,5 +209,27 @@ def _signals(system: str, user: str, schema: type[BaseModel]) -> BaseModel:
     return PassageExtractions(extractions=[x] if x else [])
 
 
+def _identity(system: str, user: str, schema: type[BaseModel]) -> BaseModel:
+    return IdentityCard(
+        full_name="Dorian Vexley-Marsh", name_variants=["D. Vexley-Marsh"], current_role="Chairman, Halcyon Reef Capital",
+        employer="Halcyon Reef Capital", city="Long Beach", spouse="Imara Vexley-Marsh", education=["University of Southern California, B.S. 1994", "UCLA Anderson, M.B.A."],
+        anchor_facts=[AnchorFact(fact="Founded Halcyon Reef Capital in 2003", source_url="https://halcyonreef.example/about/leadership.html"),
+                      AnchorFact(fact="$12 million gift to USC, 2025", source_url="https://fixture.example/news/2025/03/vexley-marsh-gift.html")],
+        namesakes=[Namesake(description="Dr. Dorian Vexley-Marsh, a dentist in Columbus, Ohio (Ohio State, 2008)", source_url="https://buckeyedental.example/team/dorian-vexley-marsh.html")],
+        can_separate=True, reasoning="The employer and school anchors match only the Long Beach investor.",
+    )
+
+
+_ENTAIL_RE = re.compile(r"^id: (?P<id>\S+)\nclaim: (?P<claim>.+)$", re.M)
+
+
+def _entail(system: str, user: str, schema: type[BaseModel]) -> BaseModel:
+    out = []
+    for m in _ENTAIL_RE.finditer(user):
+        verdict = "no" if "founded Pelagic" in m["claim"] else "supports"
+        out.append(EntailmentVerdict(id=m["id"], verdict=verdict))
+    return EntailmentVerdicts(verdicts=out)
+
+
 def build_fake_llm(run_dir: Path | None) -> FakeLLM:
-    return FakeLLM({"plan": _plan, "extract-": _extract, "write-": _write, "signals-": _signals}, run_dir)
+    return FakeLLM({"plan": _plan, "extract-": _extract, "write-": _write, "signals-": _signals, "identity": _identity, "entail-": _entail}, run_dir)

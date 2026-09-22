@@ -75,10 +75,12 @@ async def test_blocklist_and_robots_never_fetched(result):
 async def test_every_factual_sentence_has_a_footnote(result):
     brief, html_path, *_ = result
     tree = lxml_html.fromstring(html_path.read_text())
-    paras = tree.xpath("//h2/following-sibling::p[1]")  # first paragraph under each numbered section
+    # the first paragraph under each of the 8 factual sections (summary .. recent news)
+    paras = tree.xpath("//h2[not(contains(., 'talking points')) and not(contains(., 'gaps')) and not(contains(., 'Sources'))]/following-sibling::p[1]")
+    assert len(paras) == 8
     checked = 0
     for p in paras:
-        if "empty" in (p.get("class") or "") or "ai" in (p.get("class") or ""):
+        if "empty" in (p.get("class") or ""):
             continue
         # every sentence-ending period inside the paragraph must be followed by a footnote link
         text_nodes = p.xpath(".//text()[not(ancestor::span[@class='card']) and not(ancestor::sup)]")
@@ -114,18 +116,42 @@ async def test_outputs_and_run_log(result):
     rows = list(csv.DictReader(open(out / "evidence.csv")))
     assert any(r["status"] == "dropped" and r["drop_reason"] for r in rows)
     logs = list((run_dir / "llm").glob("*.json"))
-    assert len(logs) == len(llm.calls) and any(f.name.startswith("001-plan") for f in logs)
+    assert len(logs) == len(llm.calls) and any(f.name.startswith("001-identity") for f in logs) and any(f.name.endswith("-plan.json") for f in logs)
     assert "Prepared from public sources only. No wealth-screening data used." in html_path.read_text()
 
 
-@pytest.mark.xfail(reason="identity check (d) lands in M2", strict=True)
 async def test_namesake_facts_never_enter_the_brief(result):
     brief, html_path, *_ = result
-    assert "dentistry" not in html_path.read_text() and "Columbus" not in html_path.read_text()
+    html = html_path.read_text()
+    body = html.split("Possibly a different person")[0]
+    assert "dentistry" not in body and "Columbus" not in body and "$5,000" not in body
+    flagged = [e for e in brief.evidence if e.status == "flagged"]
+    assert flagged and all(e.drop_reason == "possibly_different_person" for e in flagged)
+    assert any("buckeyedental" in d["url"] for d in brief.possibly_different_person)
+    assert "buckeyedental.example" in html  # listed in the gaps section for the researcher
 
 
-@pytest.mark.xfail(reason="conflict detection lands in M2", strict=True)
 async def test_conflicting_amount_is_surfaced(result):
-    brief, *_ = result
+    brief, html_path, *_ = result
     ten = [e for e in brief.evidence if "$10 million" in e.claim]
-    assert ten and ten[0].conflicts_with
+    twelve = [e for e in brief.evidence if "$12 million" in e.claim and e.status == "verified"]
+    assert ten and twelve and twelve[0].id in ten[0].conflicts_with
+    assert brief.conflicts and "Conflicting information" in html_path.read_text()
+
+
+async def test_entailment_failure_is_dropped(result):
+    brief, *_ = result
+    bad = [e for e in brief.evidence if "founded Pelagic" in e.claim]
+    assert bad and bad[0].status == "dropped" and bad[0].drop_reason == "entailment:no"
+    assert bad[0].checks.quote and bad[0].checks.specifics  # it passed (a) and (b); only (c) caught it
+
+
+async def test_tiers_and_identity_card(result):
+    brief, html_path, *_ = result
+    by_url = {e.source_url: e.source_tier for e in brief.evidence}
+    assert by_url["https://fixture.example/news/2025/03/vexley-marsh-gift.html"] == 1
+    assert by_url["https://halcyonreef.example/about/leadership.html"] == 1  # subject's own company
+    assert by_url["https://coastalbusinessjournal.example/2024/06/halcyon-reef-sale.html"] == 2
+    assert by_url["https://oceantechweekly.example/2025/interview-vexley-marsh.html"] == 3
+    assert 'class="t3"' in html_path.read_text()
+    assert brief.identity and brief.identity.can_separate and brief.report.counts["identity_anchors"] >= 3

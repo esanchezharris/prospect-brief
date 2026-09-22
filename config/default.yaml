@@ -24,7 +24,7 @@ fetch:
 verify:
   quote_partial_ratio_min: 92
   max_sentence_drop_fraction: 0.10 # regenerate once if writer exceeds this
-  identity_score_min: 0.5          # M2
+  identity_score_min: 0.25         # check (d): a document needs at least one confirmed anchor and this share of anchor weight
   stale_role_months: 18            # M2
 blocklist:                         # never fetched, never searched (hard rule 1)
   - linkedin.com
@@ -54,8 +54,8 @@ blocklist:                         # never fetched, never searched (hard rule 1)
   - iwave.com
   - blocked.example            # fixture domain used by tests
 tiers:                             # M2; 1 = primary/official, 2 = established news, 3 = everything else
-  tier1_suffixes: [sec.gov, propublica.org, irs.gov, usc.edu]
-  tier2_domains: [nytimes.com, wsj.com, washingtonpost.com, reuters.com, apnews.com, bloomberg.com, ft.com, latimes.com, forbes.com, philanthropy.com, chronicle.com, insidephilanthropy.com, cnbc.com, bbc.com, theguardian.com, npr.org, axios.com, fortune.com, businessinsider.com, politico.com]
+  tier1_suffixes: [sec.gov, propublica.org, irs.gov, usc.edu, fixture.example]   # fixture.example stands in for the institution in tests
+  tier2_domains: [nytimes.com, wsj.com, washingtonpost.com, reuters.com, apnews.com, bloomberg.com, ft.com, latimes.com, forbes.com, philanthropy.com, chronicle.com, insidephilanthropy.com, cnbc.com, bbc.com, theguardian.com, npr.org, axios.com, fortune.com, businessinsider.com, politico.com, coastalbusinessjournal.example]
 brief_sections:
   - {key: summary, title: Summary}
   - {key: background, title: Background and education}

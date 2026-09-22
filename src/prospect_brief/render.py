@@ -37,6 +37,8 @@ def number_sources(brief: Brief) -> tuple[dict[str, int], list[dict]]:
             visit(s.evidence_ids)
     for t in brief.talking_points:
         visit(t.evidence_ids)
+    for pair in brief.conflicts:
+        visit(pair)
     return numbers, sources
 
 

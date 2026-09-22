@@ -63,31 +63,43 @@ really appears in the cached copy of the source (allowing only for whitespace an
 differences, or a near-exact fuzzy match of 92 out of 100). Code also checks that every number,
 dollar amount, date, and name in the claim appears inside that quote, so a claim cannot say more
 than its quote. The footnote number in the brief links to the source list, and hovering shows the
-quote, publisher, date, and source tier.
+quote, publisher, date, and source tier (1 = primary or official such as SEC, IRS data, or the
+institution; 2 = established news; 3 = everything else, marked with a ° in the text). The same
+fact from two independent sites is marked corroborated; a "current" role from a source older than
+18 months is written "as of" that date.
 
 ### Confidence thresholds
 
 A quote must match the source at 92 or better on a 0 to 100 partial-match scale, or the claim is
-dropped; there is no partial credit. After the brief is written, code deletes any factual sentence
-that does not cite a valid evidence id, and if more than 10 percent of the sentences had to be
-deleted, the writer is run once more from the same evidence. Dropped claims are kept in
-`evidence.csv` with the reason, so a reviewer can see what was excluded.
+dropped; there is no partial credit. A document is only used if it contains at least one of the
+confirmed identity anchors (employer, city, school, spouse named in joint philanthropy), otherwise
+every claim from it is set aside and the document is listed under "Possibly a different person".
+A small, cheap model then answers one question per surviving claim, "does this quote support this
+claim: supports, partially, or no", and only "supports" passes. After the brief is written, code
+deletes any factual sentence that does not cite a valid evidence id, and if more than 10 percent
+of the sentences had to be deleted, the writer is run once more. Dropped claims stay in
+`evidence.csv` with the reason.
 
 ### Hallucination testing
 
 The test suite runs the whole pipeline on a fictional person with a local corpus of pages that
 includes planted traps: a claim whose quote is not in the source, a claim with a wrong dollar
-figure, a page on a blocked domain, a page that robots.txt forbids, and a page containing a hidden
-"ignore previous instructions" message. The tests assert that each trap is caught in code: the
-bad claims are dropped, the forbidden pages are never fetched, and nothing from the injected
-instruction reaches the brief. A property test mutates a real quote 200 times and requires that
+figure, a claim whose quote is real but does not actually say what the claim says, a page about a
+different person with the same name, two pages that disagree on a gift amount, a page on a blocked
+domain, a page that robots.txt forbids, and a page containing a hidden "ignore previous
+instructions" message. The tests assert that each trap is caught in code: the
+bad claims are dropped, the namesake's facts never enter the brief, the disagreement is shown side
+by side rather than silently resolved, the forbidden pages are never fetched, and nothing from
+the injected instruction reaches the brief. A property test mutates a real quote 200 times and requires that
 every mutated version is rejected.
 
 ### Human-in-the-loop
 
-The tool prints the subject, anchors, and institution and asks for confirmation before it runs
-(`--yes` skips this for scripted use); full identity resolution with a printed identity card is
-the next milestone. A prospect researcher is expected to click footnotes and check them, and the
+Before any research, the tool looks the person up (a few searches plus Wikipedia and Wikidata),
+prints an identity card with the anchor facts, their sources, and every namesake it found, and
+asks you to confirm it is the right person (`--yes` skips the prompt for scripted use). If the
+anchors cannot separate the person from a namesake, it stops and asks for another anchor instead
+of guessing. A prospect researcher is expected to click footnotes and check them, and the
 signal watch stops at a list of names with a ready-to-copy command for each person: it does not
 match names against Salesforce or any CRM, and this repository has no CRM access of any kind.
 
