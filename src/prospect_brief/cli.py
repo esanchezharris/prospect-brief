@@ -126,16 +126,20 @@ def signals(institution: str, days: int, forms: str, config_path: Path | None, l
 @main.command()
 @click.argument("slug")
 @click.option("--run-id", default=None, help="Brief run to evaluate (default: the latest brief for the subject)")
+@click.option("--all-runs", is_flag=True, help="Score every brief for the subject and print a run-to-run table")
 @click.option("--config", "config_path", type=click.Path(exists=True, path_type=Path), default=None)
-def eval(slug: str, run_id: str | None, config_path: Path | None) -> None:
-    """Score the latest brief for eval/SLUG.yaml: recall of known facts, plus a precision audit CSV."""
+def eval(slug: str, run_id: str | None, all_runs: bool, config_path: Path | None) -> None:
+    """Score briefs against eval/SLUG.yaml (or eval/real/SLUG.yaml): recall of known facts, plus a precision audit CSV."""
     import json
 
     from .evaluate import evaluate, format_table, load_eval, write_outputs
     from .models import Brief
 
     config = Config.load(config_path)
-    spec = load_eval(config.root / "eval" / f"{slug}.yaml")
+    spec_path = next((p for p in (config.root / "eval" / f"{slug}.yaml", config.root / "eval" / "real" / f"{slug}.yaml") if p.exists()), None)
+    if spec_path is None:
+        raise click.ClickException(f"no eval file eval/{slug}.yaml or eval/real/{slug}.yaml")
+    spec = load_eval(spec_path)
     runs = sorted(config.briefs_dir.glob("*/brief.json")) + sorted((config.root / ".fixture" / "briefs").glob("*/brief.json"))
     runs.sort(key=lambda r: r.parent.name)
     if run_id:
@@ -144,6 +148,14 @@ def eval(slug: str, run_id: str | None, config_path: Path | None) -> None:
         runs = [r for r in runs if json.loads(r.read_text())["subject"].lower() == spec["subject"].lower()]
     if not runs:
         raise click.ClickException(f"no brief found for {spec['subject']!r}; run `prospect-brief run` first")
+    if all_runs:
+        click.echo(f"{'run':<42} {'recall':>8} {'verified':>8} {'sources':>7} {'time':>6} {'cost':>6}  writer")
+        for r in runs:
+            b = Brief.model_validate_json(r.read_text())
+            res = evaluate(b, spec["facts"])
+            writer = next((u.model for u in b.report.usage if "opus" in u.model), next((u.model for u in b.report.usage if "sonnet" in u.model), "?"))
+            click.echo(f"{b.report.run_id:<42} {res['recalled']:>3}/{res['facts']:<4} {res['verified_claims']:>8} {b.report.counts.get('sources_cited', 0):>7} {b.report.wall_seconds:>5.0f}s {b.report.cost_usd:>6.2f}  {writer}")
+        return
     brief = Brief.model_validate_json(runs[-1].read_text())
     result = evaluate(brief, spec["facts"])
     audit, summary = write_outputs(result, config.root / "eval" / "out", slug)

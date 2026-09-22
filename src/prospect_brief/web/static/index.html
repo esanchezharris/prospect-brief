@@ -129,7 +129,7 @@
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const STAGES = [["identity","Identity"],["plan","Plan"],["search","Search"],["fetch","Fetch"],["structured","Filings & IRS"],["extract","Extract"],["verify","Verify"],["write","Write"],["done","Render"]];
-const STAGE_KEY = {"[plan]":"plan","[search]":"search","[fetch]":"fetch","[edgar]":"structured","[propublica]":"structured","[extract]":"extract","[verify]":"verify","[done]":"done"};
+const STAGE_KEY = {"[plan]":"plan","[search]":"search","[fetch]":"fetch","[edgar]":"structured","[propublica]":"structured","[extract]":"extract","[verify]":"verify","[write]":"write","[done]":"done"};
 const REASONS = {
   quote_not_in_source: ["Fabricated quote", "quote not found in the cached source"],
   specific_missing: ["Wrong figure or name", "a number, date or name in the claim is not in its quote"],

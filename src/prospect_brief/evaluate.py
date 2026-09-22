@@ -25,9 +25,18 @@ def load_eval(path: Path) -> dict:
     return data
 
 
+def _canon(text: str) -> str:
+    """Spell figures one way on both sides: '4 percent' -> '4%', '26 billion dollars' -> '$26 billion'."""
+    text = re.sub(r"(\d[\d.,]*)\s*percent\b", r"\1%", text, flags=re.I)
+    text = re.sub(r"(\d[\d.,]*)\s*(million|billion|thousand)\s+dollars\b", r"$\1 \2", text, flags=re.I)
+    text = re.sub(r"\bUS\$", "$", text)
+    return text
+
+
 def fact_matches(fact: str, claim: str, *, min_ratio: int = 70) -> tuple[bool, int]:
     """A known fact is recalled when a verified claim has similar wording AND contains every
     number, amount and date in the fact."""
+    fact, claim = _canon(fact), _canon(claim)
     ratio = int(fuzz.token_set_ratio(normalize(fact), normalize(claim)))
     if ratio < min_ratio:
         return False, ratio

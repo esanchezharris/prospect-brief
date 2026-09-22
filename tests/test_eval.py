@@ -16,6 +16,13 @@ def test_fact_matching_requires_figures():
     assert not bad
 
 
+def test_fact_matching_canonicalizes_figures():
+    ok, _ = fact_matches("Received about a 4% stake in Amazon in the 2019 divorce.", "She received roughly a 4 percent stake in Amazon as part of her 2019 divorce from Jeff Bezos.")
+    assert ok
+    ok2, _ = fact_matches("Gave $26 billion since 2019.", "Scott has donated more than 26 billion dollars through Yield Giving since 2019.")
+    assert ok2
+
+
 def test_eval_on_fixture_brief(tmp_path):
     config = make_config(tmp_path)
     run_dir = tmp_path / "runs" / "eval-run"

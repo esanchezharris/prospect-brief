@@ -15,3 +15,6 @@ __pycache__/
 # local key scratch files
 Tavily key.rtf
 *.rtf
+
+# eval files for real public figures stay local (public facts, but about real people)
+eval/real/

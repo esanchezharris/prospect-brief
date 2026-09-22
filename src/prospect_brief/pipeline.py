@@ -253,6 +253,7 @@ async def run_brief(
         report.counts["sentences_kept"] = wstats["sentences_kept"]
         report.counts["sentences_deleted_no_citation"] = wstats["sentences_deleted"]
         report.counts["writer_attempts"] = wstats["attempts"]
+        log(f"[write] {wstats['sentences_kept']} sentences kept, {wstats['sentences_deleted']} deleted for missing citations, {wstats['attempts']} attempt(s)")
     else:
         from .models import BriefDraft
 
