@@ -41,6 +41,17 @@ Signal watch (people affiliated with an institution named in SEC filings over th
 uv run prospect-brief signals --institution "University of Southern California" --days 90
 ```
 
+Eval (recall against known facts, plus a 25-claim sample for hand precision audit). Copy
+`eval/TEMPLATE.yaml` to `eval/<slug>.yaml` with 10 known public facts, run the brief, then:
+
+```bash
+uv run prospect-brief eval <slug>
+```
+
+It prints a recall table and writes `eval/out/<slug>-precision-audit.csv` (mark each sampled claim
+correct or not) and `eval/out/<slug>-eval.json`. The fictional subject's file is
+`eval/dorian-vexley-marsh.yaml`.
+
 Tests:
 
 ```bash

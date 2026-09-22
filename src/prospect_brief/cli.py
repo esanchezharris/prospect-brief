@@ -116,5 +116,32 @@ def signals(institution: str, days: int, forms: str, config_path: Path | None, l
     click.echo(f"\nHTML: {html_path}\nCSV:  {csv_path}")
 
 
+@main.command()
+@click.argument("slug")
+@click.option("--run-id", default=None, help="Brief run to evaluate (default: the latest brief for the subject)")
+@click.option("--config", "config_path", type=click.Path(exists=True, path_type=Path), default=None)
+def eval(slug: str, run_id: str | None, config_path: Path | None) -> None:
+    """Score the latest brief for eval/SLUG.yaml: recall of known facts, plus a precision audit CSV."""
+    import json
+
+    from .evaluate import evaluate, format_table, load_eval, write_outputs
+    from .models import Brief
+
+    config = Config.load(config_path)
+    spec = load_eval(config.root / "eval" / f"{slug}.yaml")
+    runs = sorted(config.briefs_dir.glob("*/brief.json"))
+    if run_id:
+        runs = [r for r in runs if r.parent.name == run_id]
+    else:
+        runs = [r for r in runs if json.loads(r.read_text())["subject"].lower() == spec["subject"].lower()]
+    if not runs:
+        raise click.ClickException(f"no brief found for {spec['subject']!r}; run `prospect-brief run` first")
+    brief = Brief.model_validate_json(runs[-1].read_text())
+    result = evaluate(brief, spec["facts"])
+    audit, summary = write_outputs(result, config.root / "eval" / "out", slug)
+    click.echo(format_table(result))
+    click.echo(f"\nPrecision audit sample: {audit}\nSummary: {summary}")
+
+
 if __name__ == "__main__":
     sys.exit(main())

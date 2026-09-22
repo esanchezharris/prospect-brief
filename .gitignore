@@ -3,6 +3,7 @@ runs/
 cache/
 briefs/
 signals/
+eval/out/
 .venv/
 __pycache__/
 *.pyc

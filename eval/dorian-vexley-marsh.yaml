@@ -1,0 +1,19 @@
+# Fictional test subject (see tests/fixtures). Used by the test suite; safe to commit.
+subject: "Dorian Vexley-Marsh"
+anchors:
+  employer: "Halcyon Reef Capital"
+  school: "University of Southern California"
+  city: "Long Beach"
+institution: "University of Southern California"
+facts:
+  - "Gave $12 million to the University of Southern California in March 2025 for an ocean robotics center."
+  - "Graduated from USC's Viterbi School of Engineering in 1994."
+  - "Founded Halcyon Reef Capital in 2003."
+  - "Sold a majority stake in Halcyon Reef Capital to Meridian Partners for $410 million in 2024."
+  - "Serves on the board of the Tidewater Trust."
+  - "Holds an M.B.A. from UCLA Anderson."
+  - "The Vexley-Marsh Family Foundation had total assets of $48,300,000 at the end of 2024."
+  - "Director of Pelagic Systems since 2019."
+  - "Sold 50,000 shares of Pelagic Systems at $18.25 per share in August 2026."
+  - "Received $215,000 in director compensation from Pelagic Systems in fiscal 2025."
+  - "Won the Nobel Prize in 2020."   # deliberately false: must NOT be recalled

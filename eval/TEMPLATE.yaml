@@ -1,0 +1,10 @@
+# Copy to eval/<slug>.yaml for a real public figure with well-documented public philanthropy.
+# Real eval files are supplied by the project owner and describe only public facts.
+subject: "Full Name"
+anchors:
+  employer: "..."
+  school: "..."
+institution: "University of Southern California"
+facts:
+  - "One known fact per line, with the number, amount or date you expect the brief to contain."
+  - "Recall counts a fact as found when a verified claim has similar wording and every figure in the fact."
