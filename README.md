@@ -169,3 +169,7 @@ match names against Salesforce or any CRM, and this repository has no CRM access
 
 `.env`, `runs/`, `cache/`, `briefs/` and `signals/` are gitignored. No real person's data is
 committed; automated tests use only the fictional corpus under `tests/fixtures/`.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Nonprofit financial data comes from IRS filings via ProPublica Nonprofit Explorer under its own noncommercial-with-attribution terms.
