@@ -1,10 +1,10 @@
 .env
-runs/
-cache/
-briefs/
-signals/
+/runs/
+/cache/
+/briefs/
+/signals/
 eval/out/
-.fixture/
+/.fixture/
 .venv/
 __pycache__/
 *.pyc
