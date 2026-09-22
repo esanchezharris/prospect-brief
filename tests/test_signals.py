@@ -32,6 +32,8 @@ def test_resolve_full_name_from_filing_text():
     assert resolve_full_name("Emil", doc2) == ("Emil deGoma", True)
     assert resolve_full_name("Ravichandran", doc2) == ("Ravi Ravichandran", True)
     assert resolve_full_name("Jeff", "Nothing here about anyone.") == ("Jeff", False)
+    doc3 = 'FibroBiologics Appoints Kathleen "Kate" Rubins, Ph.D. to Board of Directors. As a retired NASA astronaut, Dr. Rubins has conducted research. Dr. Rubins holds a Ph.D. from Stanford University.'
+    assert resolve_full_name("Dr. Rubins", doc3) == ("Kathleen Rubins", True)
 
 
 def test_hit_from_json_builds_document_url():
@@ -89,3 +91,13 @@ def test_unicode_names_make_readable_run_ids():
 
     assert make_run_id("José Álvarez-Núñez").endswith("-jose-alvarez-nunez")
     assert make_run_id("李小龙").endswith("-subject")
+
+
+def test_organization_names_are_not_people():
+    from prospect_brief.signals.extract import looks_like_organization
+
+    assert looks_like_organization("Lam Research")
+    assert looks_like_organization("Oura Inc.")
+    assert looks_like_organization("Reformation", "Reformation Inc.")
+    assert not looks_like_organization("Leslie Kilgore", "Oura Inc.")
+    assert not looks_like_organization("Priya Ellsworth-Nakamura", "Coralline Therapeutics, Inc.")
