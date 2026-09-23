@@ -256,7 +256,7 @@ async function runTrust(ev) {
   ev.preventDefault();
   $("t-err").textContent = ""; $("t-log").textContent = ""; $("t-traps").innerHTML = ""; $("t-table").innerHTML = ""; $("t-open").innerHTML = ""; $("t-run").disabled = true;
   try {
-    const {job_id} = await post("/api/briefs", {name: "Dorian Vexley-Marsh", anchors: {employer: "Halcyon Reef Capital", school: "University of Southern California", city: "Long Beach"}, institution: "University of Southern California", mode: "fixture"});
+    const {job_id} = await post("/api/briefs", {name: "Dorian Vexley-Marsh", anchors: {employer: "Halcyon Reef Capital", school: "University of Southern California", city: "Long Beach"}, institution: "University of Southern California", mode: "fixture", confirm_identity: false});
     stream(`/api/briefs/${job_id}/events`, l => appendLog($("t-log"), l), async d => {
       $("t-run").disabled = false;
       const ev = await (await fetch(`/api/briefs/${d.run_id}/evidence`)).json();
@@ -272,7 +272,9 @@ async function runTrust(ev) {
 
 // ---- runs
 async function loadRuns() {
-  const runs = await (await fetch("/api/briefs")).json();
+  const all = await (await fetch("/api/briefs")).json();
+  // real runs, plus only the newest fixture run (test runs pile up otherwise)
+  const runs = all.filter((r, i) => !r.fixture || all.findIndex(x => x.fixture) === i);
   $("runs-list").innerHTML = runs.length ? runs.slice(0, 12).map(r => `<li><span><a href="${r.html_url}" target="_blank">${esc(r.subject)}</a> ${r.fixture ? '<span class="pill">fixture</span>' : ''} <span class="muted">${esc((r.finished_at||"").replace("T"," ").slice(0,16))}</span></span><span class="muted">${r.counts.claims_verified ?? "?"} verified · ${r.counts.sources_cited ?? "?"} sources · ${r.wall_seconds}s · $${(+r.cost_usd).toFixed(2)}</span></li>`).join("") : '<li class="muted">No runs yet.</li>';
 }
 resetStages(); loadRuns(); loadLatestSignals("live"); reattach();
