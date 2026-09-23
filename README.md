@@ -12,8 +12,13 @@ Built as a demo. The full specification is in [SPEC.md](SPEC.md); the non-negoti
 
 ```bash
 uv sync
-cp .env.example .env   # then fill in ANTHROPIC_API_KEY, TAVILY_API_KEY, CONTACT_EMAIL
+cp .env.example .env   # then fill in TAVILY_API_KEY, CONTACT_EMAIL, and the key for your LLM provider
 ```
+
+The LLM provider is one setting: `llm.provider` in `config/default.yaml` (`anthropic` or `openai`;
+the env var `PROSPECT_LLM` overrides it, and every command accepts `--llm`). Each provider is one
+class in `src/prospect_brief/llm.py` with the same interface, logging and cost accounting, and the
+model ids and prices per provider live in the config. Azure OpenAI would be a third class there.
 
 ## Demo page
 

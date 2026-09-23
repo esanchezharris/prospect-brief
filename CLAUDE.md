@@ -19,7 +19,7 @@ Not in v1, on purpose: FEC contribution data, county property records, outreach 
 
 ## Context-update rules (Sep 22, 2026)
 
-- LLM provider isolated in `llm.py`; Azure OpenAI is the next provider to add (one file). Search provider isolated in `search.py`.
+- LLM provider isolated in `llm.py`: `AnthropicProvider` and `OpenAIProvider` (Responses API `responses.parse` with `text_format=`), chosen by `make_provider` from config `llm.provider` / env `PROSPECT_LLM` / `--llm`. Azure OpenAI is the next class to add. Search provider isolated in `search.py`.
 - README "Safeguards" headings are exactly: Grounding, Citations, Confidence thresholds, Hallucination testing, Human-in-the-loop.
 - No CRM access, ever, in this repo.
 - Demo storyline: `prospect-brief signals ...` → pick a name → `prospect-brief run ...`. Same CLI, shared cache and Evidence schema.
@@ -29,7 +29,7 @@ Not in v1, on purpose: FEC contribution data, county property records, outreach 
 
 - Python 3.12, `uv`, pydantic v2 models in `models.py`, type hints, small modules, pytest. `uv run pytest -q` must be green before each milestone commit.
 - All model calls go through `LLMProvider` in `llm.py`; every prompt and response is logged to `runs/<run_id>/llm/`. Structured output via `client.messages.parse(..., output_format=PydanticModel)`.
-- Model IDs and prices live in `config/default.yaml`, never hardcoded. Current: `claude-sonnet-5` ($2/$10 per MTok) for planning, identity and extraction; `claude-opus-5-5` ($4/$20) for the single final writing call; `claude-sonnet-5` for the entailment check (SPEC.md says Haiku-class; measured Sep 22 2026 on 261 claims, Haiku re-dropped 31 with 4 true positives vs Sonnet 16 with 5, so Sonnet was kept for +$0.10 per brief).
+- Model IDs and prices live in `config/default.yaml`, never hardcoded (`models` for Anthropic, `models_openai` for OpenAI: gpt-6-sol for writer/checker, gpt-6-astra for the author call). Anthropic set: `claude-sonnet-5` ($2/$10 per MTok) for planning, identity and extraction; `claude-opus-5-5` ($4/$20) for the single final writing call; `claude-sonnet-5` for the entailment check (SPEC.md says Haiku-class; measured Sep 22 2026 on 261 claims, Haiku re-dropped 31 with 4 true positives vs Sonnet 16 with 5, so Sonnet was kept for +$0.10 per brief).
 - Tests never call real APIs: `FakeLLM` + `MockSearchProvider` + httpx `MockTransport`.
 - Out-of-spec ideas go in IDEAS.md. Do not build them.
 - Commit after each milestone; report what works, what was cut, the exact command, and time and cost of the last real run.
