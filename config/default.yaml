@@ -1,5 +1,5 @@
 llm:
-  provider: openai                 # anthropic | openai  (env PROSPECT_LLM overrides)
+  provider: anthropic              # anthropic | openai  (env PROSPECT_LLM overrides)
 models_openai:                     # used when llm.provider = openai; ids from developers.openai.com/api/docs/pricing (Sep 22, 2026)
   writer: gpt-6-sol                # planning, identity, extraction, signals
   checker: gpt-6-sol               # entailment check

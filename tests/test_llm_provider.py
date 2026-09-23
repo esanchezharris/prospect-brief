@@ -7,6 +7,7 @@ from prospect_brief.llm import make_provider, provider_name
 def test_provider_switch_and_missing_keys(monkeypatch):
     cfg = Config.load()
     monkeypatch.delenv("PROSPECT_LLM", raising=False)
+    assert provider_name(cfg) == "anthropic"
     cfg.data["llm"]["provider"] = "openai"
     assert provider_name(cfg) == "openai"
     monkeypatch.setenv("PROSPECT_LLM", "anthropic")
