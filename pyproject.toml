@@ -19,6 +19,7 @@ dependencies = [
     "lxml>=5.2",
     "fastapi>=0.141.1",
     "uvicorn[standard]>=0.53.0",
+    "openai>=3.19.0",
 ]
 
 [project.scripts]

@@ -34,7 +34,7 @@ def main() -> None:
 @click.option("--yes", is_flag=True, help="Skip the identity confirmation prompt")
 @click.option("--config", "config_path", type=click.Path(exists=True, path_type=Path), default=None)
 @click.option("--search", "search_name", type=click.Choice(["tavily", "mock"]), default=None, help="Search provider (default from config)")
-@click.option("--llm", "llm_name", type=click.Choice(["anthropic", "fake"]), default="anthropic")
+@click.option("--llm", "llm_name", type=click.Choice(["anthropic", "openai", "fake"]), default=None, help="LLM provider (default: config llm.provider or env PROSPECT_LLM)")
 def run(name: str, anchors: tuple[str, ...], institution: str, yes: bool, config_path: Path | None, search_name: str | None, llm_name: str) -> None:
     """Build a brief for NAME."""
     anchor_map = _parse_anchors(anchors)
@@ -57,11 +57,12 @@ def run(name: str, anchors: tuple[str, ...], institution: str, yes: bool, config
     if llm_name == "fake":
         llm = build_fake_llm(run_dir)
     else:
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            raise click.ClickException("ANTHROPIC_API_KEY is empty. Add it to .env (see .env.example).")
-        from .llm import AnthropicProvider
+        from .llm import make_provider
 
-        llm = AnthropicProvider(config, run_dir)
+        try:
+            llm = make_provider(config, run_dir, llm_name)
+        except RuntimeError as e:
+            raise click.ClickException(str(e))
     provider = search_name or config.get("search", "provider", default="tavily")
     if provider == "mock":
         search = mock_search()
@@ -93,7 +94,7 @@ def run(name: str, anchors: tuple[str, ...], institution: str, yes: bool, config
 @click.option("--days", default=90, show_default=True)
 @click.option("--forms", default="S-1,8-K,DEF14A", show_default=True)
 @click.option("--config", "config_path", type=click.Path(exists=True, path_type=Path), default=None)
-@click.option("--llm", "llm_name", type=click.Choice(["anthropic", "fake"]), default="anthropic")
+@click.option("--llm", "llm_name", type=click.Choice(["anthropic", "openai", "fake"]), default=None, help="LLM provider (default: config llm.provider or env PROSPECT_LLM)")
 @click.option("--max-filings", default=200, show_default=True, help="Safety cap on filings fetched")
 def signals(institution: str, days: int, forms: str, config_path: Path | None, llm_name: str, max_filings: int) -> None:
     """List people affiliated with INSTITUTION named in recent SEC filings."""
@@ -109,13 +110,14 @@ def signals(institution: str, days: int, forms: str, config_path: Path | None, l
         transport = fixture_transport()
         config.root = config.root / ".fixture"  # fixture runs never touch the real cache or outputs
     else:
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            raise click.ClickException("ANTHROPIC_API_KEY is empty. Add it to .env (see .env.example).")
-        from .llm import AnthropicProvider
+        from .llm import make_provider
 
         run_dir = config.runs_dir / f"signals-{institution.lower().replace(' ', '-')[:30]}"
         run_dir.mkdir(parents=True, exist_ok=True)
-        llm = AnthropicProvider(config, run_dir)
+        try:
+            llm = make_provider(config, run_dir, llm_name)
+        except RuntimeError as e:
+            raise click.ClickException(str(e))
     try:
         html_path, csv_path = asyncio.run(run_signals(institution=institution, days=days, forms=form_list, config=config, llm=llm, max_filings=max_filings, transport=transport, log=click.echo))
     except ValueError as e:
@@ -155,16 +157,17 @@ def eval(slug: str, run_id: str | None, all_runs: bool, judge: bool, judge_all: 
         for r in runs:
             b = Brief.model_validate_json(r.read_text())
             res = evaluate(b, spec["facts"])
-            writer = next((u.model for u in b.report.usage if "opus" in u.model), next((u.model for u in b.report.usage if "sonnet" in u.model), "?"))
+            writer = next((u.model for u in b.report.usage if "opus" in u.model or "astra" in u.model), next((u.model for u in b.report.usage if u.calls == max(x.calls for x in b.report.usage)), None))
+            writer = writer.model if hasattr(writer, "model") else (writer or "?")
             click.echo(f"{b.report.run_id:<42} {res['recalled']:>3}/{res['facts']:<4} {res['verified_claims']:>8} {b.report.counts.get('sources_cited', 0):>7} {b.report.wall_seconds:>5.0f}s {b.report.cost_usd:>6.2f}  {writer}")
         return
     brief = Brief.model_validate_json(runs[-1].read_text())
     result = evaluate(brief, spec["facts"], sample_size=10_000 if judge_all else 25)
     if judge or judge_all:
         from .evaluate import judge_precision
-        from .llm import AnthropicProvider
+        from .llm import make_provider
 
-        result["judge"] = judge_precision(AnthropicProvider(config, config.runs_dir / f"eval-{slug}"), result["precision_sample"])
+        result["judge"] = judge_precision(make_provider(config, config.runs_dir / f"eval-{slug}"), result["precision_sample"])
     audit, summary = write_outputs(result, config.root / "eval" / "out", slug)
     click.echo(format_table(result))
     click.echo(f"\nPrecision audit sample: {audit}\nSummary: {summary}")

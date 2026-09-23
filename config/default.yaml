@@ -1,4 +1,10 @@
-models:
+llm:
+  provider: openai                 # anthropic | openai  (env PROSPECT_LLM overrides)
+models_openai:                     # used when llm.provider = openai; ids from developers.openai.com/api/docs/pricing (Sep 22, 2026)
+  writer: gpt-6-sol                # planning, identity, extraction, signals
+  checker: gpt-6-sol               # entailment check
+  author: gpt-6-astra              # the single final writing call (Opus-class; ~$0.45 per brief; set to gpt-6-sol to save it)
+models:                            # used when llm.provider = anthropic
   writer: claude-sonnet-5          # extraction, planning, writing (Sonnet-class per SPEC.md)
   checker: claude-sonnet-5         # entailment check (c). Haiku 4.5 was measured as noisier: on 261 verified claims it re-dropped 31 (4 real) vs Sonnet 16 (5 real); +$0.10/brief
   author: claude-opus-5-5          # the one final call that writes the brief prose from verified evidence
@@ -7,6 +13,9 @@ prices_per_mtok:                   # USD, input/output, from platform.claude.com
   claude-haiku-4-5-20251001: {input: 1.00, output: 5.00}
   claude-opus-5-5: {input: 4.00, output: 20.00}
   claude-opus-5: {input: 5.00, output: 25.00}
+  gpt-6-astra: {input: 10.00, output: 50.00}
+  gpt-6-sol: {input: 2.00, output: 10.00}
+  gpt-6-luna: {input: 0.10, output: 0.50}
 budgets:
   max_searches: 30
   max_documents: 50

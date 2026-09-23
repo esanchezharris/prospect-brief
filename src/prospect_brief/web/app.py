@@ -99,10 +99,10 @@ def _brief_worker(job: Job, req: BriefRequest) -> None:
 
             llm, search, transport = build_fake_llm(run_dir), mock_search(), fixture_transport()
         else:
-            from ..llm import AnthropicProvider
+            from ..llm import make_provider
             from ..search import TavilyProvider
 
-            llm = AnthropicProvider(cfg, run_dir)
+            llm = make_provider(cfg, run_dir)
             search = TavilyProvider(exclude_domains=cfg.blocklist, user_agent=cfg.user_agent)
 
         async def go():
@@ -132,11 +132,11 @@ def _signals_worker(job: Job, req: SignalsRequest) -> None:
 
             llm, transport = build_fake_llm(None), fixture_transport()
         else:
-            from ..llm import AnthropicProvider
+            from ..llm import make_provider
 
             run_dir = cfg.runs_dir / f"signals-{req.institution.lower().replace(' ', '-')[:30]}"
             run_dir.mkdir(parents=True, exist_ok=True)
-            llm = AnthropicProvider(cfg, run_dir)
+            llm = make_provider(cfg, run_dir)
         html_path, csv_path = asyncio.run(run_signals(institution=req.institution, days=req.days, forms=req.forms, config=cfg, llm=llm, transport=transport, log=job.emit))
         job.result = {"html_url": _url_for(html_path), "csv_url": _url_for(csv_path), "rows": _read_signal_rows(csv_path), "mode": req.mode}
         job.status = "done"

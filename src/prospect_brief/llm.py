@@ -97,6 +97,84 @@ class AnthropicProvider:
         return list(self._usage.values())
 
 
+class OpenAIProvider:
+    """OpenAI Responses API with structured outputs. Same interface, same logging, same accounting.
+    Shape confirmed from developers.openai.com/api/docs/guides/structured-outputs (Sep 22, 2026):
+    client.responses.parse(model, input=[{role, content}...], text_format=Model) -> .output_parsed,
+    .usage.input_tokens / .output_tokens."""
+
+    def __init__(self, config: Config, run_dir: Path | None = None):
+        import openai
+
+        self.config = config
+        self.client = openai.OpenAI()  # reads OPENAI_API_KEY
+        m = config.get("models_openai", default={}) or {}
+        self.models = {"writer": m.get("writer"), "checker": m.get("checker") or m.get("writer"), "author": m.get("author") or m.get("writer")}
+        if not self.models["writer"]:
+            raise RuntimeError("config models_openai.writer is not set")
+        self.log = CallLog(run_dir)
+        self._usage: dict[str, LLMUsage] = {}
+
+    def _account(self, model: str, inp: int, out: int) -> None:
+        pin, pout = self.config.price(model)
+        u = self._usage.setdefault(model, LLMUsage(model=model))
+        u.input_tokens += inp
+        u.output_tokens += out
+        u.calls += 1
+        u.cost_usd += inp * pin / 1e6 + out * pout / 1e6
+
+    def structured(self, *, purpose: str, role: str, system: str, user: str, schema: type[T], max_tokens: int = 4096) -> T:
+        model = self.models[role]
+        t0 = time.monotonic()
+        resp = self.client.responses.parse(
+            model=model,
+            input=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            text_format=schema,
+            max_output_tokens=max_tokens,
+        )
+        dt = time.monotonic() - t0
+        usage = getattr(resp, "usage", None)
+        inp = int(getattr(usage, "input_tokens", 0) or 0)
+        out = int(getattr(usage, "output_tokens", 0) or 0)
+        self._account(model, inp, out)
+        parsed = resp.output_parsed
+        record = {
+            "purpose": purpose, "model": model, "at": datetime.now(timezone.utc), "seconds": round(dt, 2),
+            "system": system, "user": user, "status": getattr(resp, "status", None),
+            "usage": {"input_tokens": inp, "output_tokens": out},
+            "parsed": parsed.model_dump() if parsed is not None else None,
+        }
+        self.log.write(purpose, record)
+        if parsed is None:
+            raise RuntimeError(f"model call {purpose} returned no structured output (status={getattr(resp, 'status', None)})")
+        return parsed
+
+    def usage(self) -> list[LLMUsage]:
+        return list(self._usage.values())
+
+
+def provider_name(config: Config) -> str:
+    import os
+
+    return (os.environ.get("PROSPECT_LLM") or config.get("llm", "provider", default="anthropic") or "anthropic").lower()
+
+
+def make_provider(config: Config, run_dir: Path | None = None, name: str | None = None) -> LLMProvider:
+    """The one place a provider is chosen. Azure OpenAI would be another branch here."""
+    import os
+
+    name = (name or provider_name(config)).lower()
+    if name == "openai":
+        if not os.environ.get("OPENAI_API_KEY"):
+            raise RuntimeError("OPENAI_API_KEY is empty. Add it to .env (see .env.example).")
+        return OpenAIProvider(config, run_dir)
+    if name == "anthropic":
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            raise RuntimeError("ANTHROPIC_API_KEY is empty. Add it to .env (see .env.example).")
+        return AnthropicProvider(config, run_dir)
+    raise RuntimeError(f"unknown llm provider {name!r}; use anthropic or openai")
+
+
 class FakeLLM:
     """Deterministic provider for tests. Handlers are keyed by purpose prefix."""
 
